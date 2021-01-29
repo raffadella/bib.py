@@ -6,8 +6,6 @@ Create, combine, complete and clean BibTeX bibliographies.
 
 The **bib.py** python script creates BibTeX bibliographies starting from just about any kind of file or information from which bibliographic data can be extracted or deduced.
 
-.. contents::
-
 
 Features
 --------
@@ -34,7 +32,7 @@ I've written **bib.py** to solve a problem that also other people might have, an
 
 * Folders (directories) with lots of PDF files without an index to their content.
 
-I wanted to generate BibTeX files for my heterogeneous collection of bibliographic data with as little effort as possible, and for this purpose I've written the script **bib.py**. The script does not attempt to clean and reformat BibTeX entries, since good tools such as `JabRef <https://github.com/JabRef/jabref>`_ and `bibtexformat <https://github.com/yfpeng/pengyifan-bibtexformat>`_ exist for this.
+I wanted to generate BibTeX files for my heterogeneous collection of bibliographic data with as little effort as possible, and for this purpose I've written the script **bib.py**. The script does not attempt to clean and reformat BibTeX entries, since good tools such as JabRef ( https://github.com/JabRef/jabref ) and bibtexformat ( https://github.com/yfpeng/pengyifan-bibtexformat ) exist for this.
 
 
 Usage
@@ -170,8 +168,6 @@ Raffaele Guido Della Valle (raffaele.dellavalle@unibo.it, raffadella@gmail.com, 
 Using **bib.py** as a library
 -----------------------------
 
-The script may be used a library (with **import bib**). All functions with names such as **Something2str** accept **Something** (given as a string) and return either BibTeX entries as a string (if they succed) or the empty string (if they fail). Functions with names like **make_Something_key** accept a BibTeX entry given as a field-value dictionary and return a **Something** key (as a string). Other functions return useful string values, **True** or **False** to indicate success or failure, or **None** if they are to be called only for side-effects and have nothing useful to return. The complete call tree appears below.
+The script may be used a library (with **import bib**). All functions with names such as **Something2str** accept **Something** (given as a string) and return either BibTeX entries as a string (if they succed) or the empty string (if they fail). Functions with names like **make_Something_key** accept a BibTeX entry given as a field-value dictionary and return a **Something** key (as a string). Other functions return useful string values, **True** or **False** to indicate success or failure, or **None** if they are to be called only for side-effects and have nothing useful to return.
 
-.. image:: README.png
-   :width: 98%
 
