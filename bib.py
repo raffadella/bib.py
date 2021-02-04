@@ -295,7 +295,7 @@ def doi_add(entries: List[BibEntry]) -> str:
        querying CROSSREF, and return all obtained entries as a string"""
     return '\n\n'.join(item2str(entry2query(entry), filename=jabfile(entry))
                        for entry in entries
-                       if not 'doi' in entry)
+                       if 'doi' not in entry)
 
 
 def rename_files(entries: List[BibEntry]) -> None:
