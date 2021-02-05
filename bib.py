@@ -1,5 +1,8 @@
 #! /usr/bin/python
-"""bib.py - Create, combine, complete and clean BibTeX bibliographies."""
+"""bib.py - Create, combine, complete and clean BibTeX bibliographies.
+See docstring of main() below, and README.md 'restructured text' file."""
+
+# Crossref REST API - https://github.com/CrossRef/rest-api-doc
 
 import os
 import sys
@@ -15,7 +18,7 @@ from isbnlib import meta, registry
 
 # Items for local configuration: email and other info of the user, and
 # commands to display a text string and a PDF file in new windows.
-USER_INFO = 'mailto:YOUR_EMAIL_HERE xxx@yyy'
+USER_INFO = 'mailto:raffaele.dellavalle@unibo.it'
 TXT_DISPLAY = ['xterm', '-geometry', '-0+0', '-hold', '-e', 'echo']
 PDF_DISPLAY = ['xpdf', '-q', '-geometry', 'x300-0-0']
 
@@ -338,7 +341,7 @@ def add2database(entries: List[BibEntry], entry: BibEntry, item: str,
     num = memo_dict.get(safe_key) or memo_dict.get(unsafe_key)
     if num is not None:
         for field, value in entry.items():
-            if field != 'ID' and not field in entries[num]:
+            if field != 'ID' and field not in entries[num]:
                 entries[num][field] = value
     else:
         entry['ID'] = make_ayc_key(entry)
