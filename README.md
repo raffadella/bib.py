@@ -1,3 +1,6 @@
+..
+  README.md for bib.py - submitted to github.com on 29 Jan 2021, together image made by
+  pyan3 bib.py --dot | grep -v ' bib ' | dot -Tpng > README.png
 
 bib.py
 ------
@@ -148,7 +151,7 @@ Installation
 
 * Satisfy all requirements.
 
-* Copy **bib.py** anywhere on your path.
+* Copy **bib.py** anywhere on your path and ensure it is executable.
 
 * Modify the variables **USER_INFO**, **TXT_DISPLAY** and **PDF_DISPLAY** at the beginning of the script as appropriate for your environment.
 
