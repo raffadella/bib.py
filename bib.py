@@ -203,7 +203,7 @@ def command(txt: str, entries: List[BibEntry]) -> str:
     if re.match(r'^r', txt):
         rename_files(entries=entries)
     if re.match(r'^[an]', txt):
-        record('all_confirm', txt[1] == 'a')
+        record('all_confirm', txt[0] == 'a')
     return ''
 
 
@@ -239,11 +239,11 @@ def query2str(txt: str, filename: str) -> str:
     url = url + '?' + urllib.parse.urlencode(params)
     request = urllib.request.Request(url, None, headers)
     try:
-        with urllib.request.urlopen(request) as response:
+        with urllib.request.urlopen(request, timeout=120) as response:
             encoding = response.info().get_param('charset', 'utf8')
             txt = response.read().decode(encoding)
-    except OSError as exception:
-        print("     exception:", exception)
+    except (Exception, KeyboardInterrupt) as exception:
+        print('     exception:', exception)
         return ''
 
     doi = re_find(txt, r'{"DOI":"(10\.\d{4,}[^"]+)"}', 1)
@@ -315,7 +315,7 @@ def rename_files(entries: List[BibEntry]) -> None:
             newroot = entry['ID']
             jabfile(entry, os.path.join(head, newroot + ext))
             if root != newroot:
-                os.system(f"record rename.ul -v '{root}' '{newroot}' '{os.path.join(head, root)}'[._-]*")
+                os.system(f"rename.ul -v '{root}' '{newroot}' '{os.path.join(head, root)}'[._-]*")
 
 
 def cleanup_entry(entry: BibEntry, item: str) -> None:
