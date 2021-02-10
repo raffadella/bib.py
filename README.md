@@ -60,7 +60,7 @@ The behaviour of the script is best explained through some examples:
 
   Each distinct entry receives a unique AYC (author-year-character) key of the form 'surname2010x', containing the surname of the first author (lower-case, with non alphabetic characters removed), the publication year, and a final character in **a** **b** ... **l** to indicate the publication month **jan** **feb** ... **dec** if available, or the last digit **0** **1** ... **9** of the page if available, or **m** if both are unavailable. In case of collisions, successive characters **n** **o** **p** ... **z** are used to ensure an unique AYC key. Whenever necessary, the AYC key is used as default file basename.
 
-* **bib.py** destination.bib 10.1103/PhysRevD.46.603 9780553109535
+* **bib.py** destination.bib 9780553109535 **10.**1103/PhysRevD.46.603
 
   Obtain BibTeX entries for all given DOI and ISBN keys (by querying **doi.org** and/or **crossref.org**) and adds them to destination.bib.
 
@@ -112,7 +112,7 @@ BibTeX Field handling
 
 * Fields **author**, **year** and **page** are used to identify BibTeX entries when **doi** and **isbn** are both missing.
 
-* Fields **author**, **year**, **page** and **month** are used to construct AYC (author-year-character) BibTeX keys.
+* Fields **author**, **year**, **month** and **page** are used to construct AYC (author-year-character) BibTeX keys.
 
 * If possible, the **file** field is created with PDF file names given on the command line. The base name of the file is changed to the AYC key if the command **-rename-files** is given.
 
