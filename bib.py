@@ -1,8 +1,10 @@
-#! /usr/bin/python
+#! /usr/bin/python3
 """bib.py - Create, combine, complete and clean BibTeX bibliographies.
 See docstring of main() below, and README.md 'restructured text' file."""
 
 # Crossref REST API - https://github.com/CrossRef/rest-api-doc
+
+# bib.py on github  - https://github.com/raffadella/bib.py
 
 import os
 import sys
@@ -13,14 +15,13 @@ import subprocess
 import urllib
 import requests
 import bibtexparser
-
 from isbnlib import meta, registry
 
 # Items for local configuration: email and other info of the user, and
 # commands to display a text string and a PDF file in new windows.
 USER_INFO = 'mailto:raffaele.dellavalle@unibo.it'
 TXT_DISPLAY = ['xterm', '-geometry', '-0+0', '-hold', '-e', 'echo']
-PDF_DISPLAY = ['xpdf', '-q', '-geometry', 'x300-0-0']
+PDF_DISPLAY = ['xpdf', '-q', '-geometry', 'x600-0-0']
 
 # URLs to resolve a DOI with crossref.org or doi.org - {} becomes the DOI
 XREF_URL = 'http://api.crossref.org/works/{}/transform/application/x-bibtex'
@@ -315,7 +316,8 @@ def rename_files(entries: List[BibEntry]) -> None:
             newroot = entry['ID']
             jabfile(entry, os.path.join(head, newroot + ext))
             if root != newroot:
-                os.system(f"rename.ul -v '{root}' '{newroot}' '{os.path.join(head, root)}'[._-]*")
+                os.system(f"record rename 's:{root}:{newroot}:' '{os.path.join(head, root)}'[._-]*")
+                #os.system(f"record rename.ul -v '{root}' '{newroot}' '{os.path.join(head, root)}'[._-]*")
 
 
 def cleanup_entry(entry: BibEntry, item: str) -> None:
@@ -350,14 +352,15 @@ def add2database(entries: List[BibEntry], entry: BibEntry, item: str,
 
 
 def main(items: List[str]) -> None:
-    """bib.py - Create, combine, complete and clean BibTeX bibliographies.
+    """
+bib.py - Create, combine, complete and clean BibTeX bibliographies.
 
 Usage: bib.py item ...
 
 The script obtains BibTeX entries from one or more items given as
 arguments. The items are interpreted as in the following examples:
 
-   bibtex.bib         BibTeX bibliography file
+   bibtex.bib         BibTeX bibliography file (*.bib or *.bibtex)
    10.1002/jrs.4278   DOI (Digital Object Identifier)
    9780553109535      ISBN (International Standard Book Number)
    'title and more'   search text (title, author ... whatever)
@@ -366,23 +369,26 @@ arguments. The items are interpreted as in the following examples:
    -rename-files      rename files as AYC for all PREVIOUS entries
    -all-confirm       grant search text confirmation from NOW ON
    -none-confirm      deny search text confirmation from NOW ON
-   any-text-file      a list of any of the items above
+   any-text-file      file containing a list of the items above
 
 BibTeX files are read in. Data from DOI, ISBN or search text is obtained by
 querying doi.org and crossref.org. PDF files are scanned to extract anything
 that looks like a DOI if possible, search text otherwise. Commands -doi-add,
 -rename-files, -all-confirm and -none-confirm are obeyed. Any other item is
 taken as a text file containing a list of the items above, by paragraph or by
-line. Since BibTeX entries obtained by searching text are unreliable, they
 line. Unreliable BibTeX entries obtained by searching text are accepted only
 if the user confirms them (unless -all-confirm or -none-confirm are given).
 The first argument MUST be a bibtex file, which is read if existing or
 created if not, and which receives all obtained BibTeX entries.
-
     """
 
-    # Arguments: one or more items, the first must match '*.bib'
-    assert items and re.search(r'(?i)\.bib(tex)?$', items[0]), main.__doc__
+    # No arguments: display usage message
+    if len(items) < 1:
+        print(main.__doc__)
+        exit(1)
+
+    # The first argument must match '*.bib'
+    assert re.search(r'(?i)\.bib(tex)?$', items[0]), f"Argument '{items[0]}' is not a BibTeX file"
 
     # Make empty database
     bibtex_database = bibtexparser.bibdatabase.BibDatabase()
