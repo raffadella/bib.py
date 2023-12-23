@@ -168,6 +168,6 @@ Raffaele Guido Della Valle (raffaele.dellavalle@unibo.it, raffadella@gmail.com, 
 Using **bib.py** as a library
 -----------------------------
 
-The script may be used a library (with **import bib**).  A graph with the complete function calls tree is available ( https://github.com/raffadella/bib.py/blob/main/README.png ).All functions with names such as **Something2str** accept **Something** (given as a string) and return either BibTeX entries as a string (if they succed) or the empty string (if they fail). Functions with names like **make_Something_key** accept a BibTeX entry given as a field-value dictionary and return a **Something** key (as a string). Other functions return useful string values, **True** or **False** to indicate success or failure, or **None** if they are to be called only for side-effects and have nothing useful to return.
+The script may be used a library (with **import bib**). All functions with names such as **Something2str** accept **Something** (given as a string) and return either BibTeX entries as a string (if they succed) or the empty string (if they fail). Functions with names like **make_Something_key** accept a BibTeX entry given as a field-value dictionary and return a **Something** key (as a string). Other functions return useful string values, **True** or **False** to indicate success or failure, or **None** if they are to be called only for side-effects and have nothing useful to return. A graph with the complete function calls tree is available ( https://github.com/raffadella/bib.py/blob/main/README.png ). 
 
 
