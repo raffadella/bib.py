@@ -2,9 +2,9 @@
 """bib.py - Create, combine, complete and clean BibTeX bibliographies.
 See docstring of main() below, and README.md 'restructured text' file."""
 
-# Crossref REST API - https://github.com/CrossRef/rest-api-doc
-
-# bib.py on github  - https://github.com/raffadella/bib.py
+# See also:
+#   bib.py on github  - https://github.com/raffadella/bib.py
+#   Crossref REST API - https://github.com/CrossRef/rest-api-doc
 
 import os
 import sys
@@ -36,6 +36,12 @@ MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun',
 
 # A regular expression (RE) matching a DOI (Digital Object Identifier)
 DOI_RE = r'\b10\.\d{4,}/[A-Za-z\d()[\]{}<>%._/#:;-]+[A-Za-z\d]\b'
+
+# Set "common_strings=True" to allow months given as "month = jan". The
+# current documented default should be "True", but since many versions of
+# bparser.py instead set it to "False", here we unconditionally fix it.
+parser = bibtexparser.bparser.BibTexParser(common_strings = True)
+
 
 # NOTE 1: In this code we deliberately use mutable defaults to memorize
 # INITIALLY EMPTY PRIVATE lists and dictionaries (either [] or {}).
@@ -400,7 +406,7 @@ created if not, and which receives all obtained BibTeX entries.
     for item in items:
         bibstr = item2str(item, entries=bibtex_database.entries)
         if bibstr:
-            for entry in bibtexparser.loads(bibstr).entries:
+            for entry in bibtexparser.loads(bibstr, parser=parser).entries:
                 add2database(bibtex_database.entries, entry, item)
         item_trace(num=len(bibtex_database.entries))
 
