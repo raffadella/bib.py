@@ -42,7 +42,7 @@ The script **bib.py** is used on the command line as
 
 * **bib.py** destination.bib item1 item2 item3 ...
 
-  The first argument (destination.bib in all examples) is required and must be a BibTeX file, which is read if existing or created if not, and which receives all BibTeX entries obtained from all 'items' given as arguments (if any). Erroneous arguments and empty or non-existing files are gracefully ignored.
+  The first argument (destination.bib in all examples) is required and must be a BibTeX file (a *.bib or *.bibtex file), which is read if existing or created if not, and which receives all BibTeX entries obtained from all 'items' given as arguments (if any). Erroneous arguments and empty or non-existing files are gracefully ignored.
 
 
 Examples
@@ -66,7 +66,7 @@ The behaviour of the script is best explained through some examples:
 
 * **bib.py** destination.bib '2005 Information loss in black holes'
 
-  Obtain BibTeX entries by querying **crossref.org** for paper title, author, year, etc. (in this case only one paper, with the publication year) and adds them to destination.bib. The search text must be quoted (with either **"** or **'**), and must contain at least five words to be recognized. Since BibTeX entries obtained by searching for text are unreliable, they are shown on the screen and the user is prompted for confirmation. The possible choices are: **y**, **n** (obvious), **all** and **none** (always grant or deny confirmation from now on, without further prompting).
+  Obtain BibTeX entries by querying **crossref.org** for paper title, author, year, etc. (only one paper in this example, with the publication year) and adds them to destination.bib. The search text must be quoted (with either **"** or **'**), and must contain at least five words to be recognized. Since BibTeX entries obtained by searching for text are unreliable, they are shown on the screen and the user is prompted for confirmation. The possible choices are: **y**, **n** (obvious), **all** and **none** (always grant or deny confirmation from now on, without further prompting).
 
 * **bib.py** destination.bib hawking1992.pdf hawking2005.pdf
 
@@ -168,6 +168,6 @@ Raffaele Guido Della Valle (raffaele.dellavalle@unibo.it, raffadella@gmail.com, 
 Using **bib.py** as a library
 -----------------------------
 
-The script may be used a library (with **import bib**). All functions with names such as **Something2str** accept **Something** (given as a string) and return either BibTeX entries as a string (if they succed) or the empty string (if they fail). Functions with names like **make_Something_key** accept a BibTeX entry given as a field-value dictionary and return a **Something** key (as a string). Other functions return useful string values, **True** or **False** to indicate success or failure, or **None** if they are to be called only for side-effects and have nothing useful to return.
+The script may be used a library (with **import bib**).  A graph with the complete function calls tree is available ( https://github.com/raffadella/bib.py/blob/main/README.png ).All functions with names such as **Something2str** accept **Something** (given as a string) and return either BibTeX entries as a string (if they succed) or the empty string (if they fail). Functions with names like **make_Something_key** accept a BibTeX entry given as a field-value dictionary and return a **Something** key (as a string). Other functions return useful string values, **True** or **False** to indicate success or failure, or **None** if they are to be called only for side-effects and have nothing useful to return.
 
 
