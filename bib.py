@@ -317,13 +317,12 @@ def rename_files(entries: List[BibEntry]) -> None:
         path = jabfile(entry)
         if path:
             head, tail = os.path.split(path)
-            root, ext = (re.match(r'(?i)^([a-z]+\d{2,4}[a-z\d]?)([_-].+)$', tail) or
-                         re.match(r'^(.+?)(\.?[^.]*)$', tail)).group(1, 2)
+            root, ext = (re.match(r'^(.+?)(\.?[^.]*)$', tail)).group(1, 2)
             newroot = entry['ID']
             jabfile(entry, os.path.join(head, newroot + ext))
             if root != newroot:
-                os.system(f"record rename 's:{root}:{newroot}:' '{os.path.join(head, root)}'[._-]*")
-                #os.system(f"record rename.ul -v '{root}' '{newroot}' '{os.path.join(head, root)}'[._-]*")
+                os.system(f"rename 's:{root}:{newroot}:' '{os.path.join(head, root)}'[._-]*")
+                #os.system(f"rename.ul -v '{root}' '{newroot}' '{os.path.join(head, root)}'[._-]*")
 
 
 def cleanup_entry(entry: BibEntry, item: str) -> None:
