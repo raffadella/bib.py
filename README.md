@@ -58,7 +58,7 @@ The behaviour of the script is best explained through some examples:
 
   Combines BibTeX files: destination.bib receives BibTeX entries from all files. Entries are considered duplicated if they have the same DOI, or the same ISBN, or the same author-year-page combination (if DOI and ISBN are both missing). Only the first of a set of duplicated entries is kept, except for missing fields (if any) which are taken from later entries.
 
-  Each distinct entry receives a unique AYC (author-year-character) key of the form 'surname2010x', containing the surname of the first author (lower-case, with non alphabetic characters removed), the publication year, and a final character in **a** **b** ... **l** to indicate the publication month **jan** **feb** ... **dec** if available, or the last digit **0** **1** ... **9** of the page if available, or **m** if both are unavailable. In case of collisions, successive characters **n** **o** **p** ... **z** are used to ensure an unique AYC key. Whenever necessary, the AYC key is used as default file basename.
+  Each distinct entry receives a unique AYC (author-year-character) key of the form 'surname2010x', containing the surname of the first author (the editor if there is no author) converted to lower-case with non alphabetic characters removed, the publication year, and a final character in **a** **b** ... **l** to indicate the publication month **jan** **feb** ... **dec** if available, or the last digit **0** **1** ... **9** of the page if available, or **m** if both are unavailable. In case of collisions, successive characters **n** **o** **p** ... **z** are used to ensure an unique AYC key. Whenever necessary, the AYC key is used as default file basename.
 
 * **bib.py** destination.bib 9780553109535 10.1103/PhysRevD.46.603
 
@@ -112,7 +112,7 @@ BibTeX Field handling
 
 * Fields **author**, **year** and **page** are used to identify BibTeX entries when **doi** and **isbn** are both missing.
 
-* Fields **author**, **year**, **month** and **page** are used to construct AYC (author-year-character) BibTeX keys.
+* Fields **author**, **editor**, **year**, **month** and **page** are used to construct AYC (author-year-character) BibTeX keys.
 
 * If possible, the **file** field is created with PDF file names given on the command line. The base name of the file is changed to the AYC key if the command **-rename-files** is given.
 
@@ -162,7 +162,7 @@ MIT
 Author
 ------
 
-Raffaele Guido Della Valle (raffaele.dellavalle@unibo.it, raffadella@gmail.com, https://www2.fci.unibo.it/~valle)
+Raffaele Guido Della Valle (raffaele.dellavalle@unibo.it, raffadella@gmail.com, https://raffaeledellavalle.neocities.org/)
 
 
 Using **bib.py** as a library

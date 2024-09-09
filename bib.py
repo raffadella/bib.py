@@ -2,6 +2,12 @@
 """bib.py - Create, combine, complete and clean BibTeX bibliographies.
 See docstring of main() below, and README.md 'restructured text' file."""
 
+# WARNING: Set "common_strings=True" to allow months given as "month = jan".
+# The current documented default should be "True", but since many versions
+# of bparser.py instead set it to "False", we fix it by changing the source:
+# /usr/lib/python3/dist-packages/bibtexparser/bparser.py
+#                 common_strings=True,
+
 # See also:
 #   bib.py on github  - https://github.com/raffadella/bib.py
 #   Crossref REST API - https://github.com/CrossRef/rest-api-doc
@@ -15,6 +21,7 @@ import subprocess
 import urllib
 import requests
 import bibtexparser
+
 from isbnlib import meta, registry
 
 # Items for local configuration: email and other info of the user, and
@@ -36,12 +43,6 @@ MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun',
 
 # A regular expression (RE) matching a DOI (Digital Object Identifier)
 DOI_RE = r'\b10\.\d{4,}/[A-Za-z\d()[\]{}<>%._/#:;-]+[A-Za-z\d]\b'
-
-# Set "common_strings=True" to allow months given as "month = jan". The
-# current documented default should be "True", but since many versions of
-# bparser.py instead set it to "False", here we unconditionally fix it.
-parser = bibtexparser.bparser.BibTexParser(common_strings = True)
-
 
 # NOTE 1: In this code we deliberately use mutable defaults to memorize
 # INITIALLY EMPTY PRIVATE lists and dictionaries (either [] or {}).
@@ -73,7 +74,7 @@ def re_find(txt: str, regexp: str, i: int = 0) -> str:
 def make_ay_key(entry: BibEntry) -> str:
     """Make AY (author-year) partial key, with surname of the first author
        (lower-case, non alphabetic characters removed) and publication year"""
-    author = entry.get('author', 'unknown')
+    author = entry.get('author') or entry.get('editor', 'unknown')
     author = re_find(author, '^(.*?)( and |$)', 1)
     au_dict = bibtexparser.customization.splitname(author, strict_mode=False)
     author = ' '.join(au_dict['last'])
@@ -314,15 +315,14 @@ def rename_files(entries: List[BibEntry]) -> None:
        (author-year-character ID) of the entry as basename. All files matching
        the old basename are renamed with the new basename if they differ."""
     for entry in entries:
-        path = jabfile(entry)
-        if path:
-            head, tail = os.path.split(path)
+        filename = jabfile(entry)
+        if filename:
+            head, tail = os.path.split(filename)
             root, ext = (re.match(r'^(.+?)(\.?[^.]*)$', tail)).group(1, 2)
             newroot = entry['ID']
             jabfile(entry, os.path.join(head, newroot + ext))
             if root != newroot:
                 os.system(f"rename 's:{root}:{newroot}:' '{os.path.join(head, root)}'[._-]*")
-                #os.system(f"rename.ul -v '{root}' '{newroot}' '{os.path.join(head, root)}'[._-]*")
 
 
 def cleanup_entry(entry: BibEntry, item: str) -> None:
@@ -357,8 +357,7 @@ def add2database(entries: List[BibEntry], entry: BibEntry, item: str,
 
 
 def main(items: List[str]) -> None:
-    """
-bib.py - Create, combine, complete and clean BibTeX bibliographies.
+    """bib.py - Create, combine, complete and clean BibTeX bibliographies.
 
 Usage: bib.py item ...
 
@@ -392,7 +391,7 @@ created if not, and which receives all obtained BibTeX entries.
         print(main.__doc__)
         exit(1)
 
-    # The first argument must match '*.bib'
+    # The first argument must match '*.bib' or '*.bibtex'
     assert re.search(r'(?i)\.bib(tex)?$', items[0]), f"Argument '{items[0]}' is not a BibTeX file"
 
     # Make empty database
@@ -405,7 +404,7 @@ created if not, and which receives all obtained BibTeX entries.
     for item in items:
         bibstr = item2str(item, entries=bibtex_database.entries)
         if bibstr:
-            for entry in bibtexparser.loads(bibstr, parser=parser).entries:
+            for entry in bibtexparser.loads(bibstr).entries:
                 add2database(bibtex_database.entries, entry, item)
         item_trace(num=len(bibtex_database.entries))
 
