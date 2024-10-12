@@ -152,7 +152,7 @@ Installation
 
 * Modify the variables **USER_INFO**, **TXT_DISPLAY** and **PDF_DISPLAY** at the beginning of the script as appropriate for your environment.
 
-* The documented default value of the variable **common_strings** in the library **bparser.py** is **True**. However, some library versions instead set it to **False**- In this case, edit **bparser.py** to specify "**common_strings=True**".
+* The documented default value of the variable **common_strings** in the library **bparser.py** is **True**. However, some library versions instead set it to **False**. In this case, edit **bparser.py** to specify "**common_strings=True**".
 
 
 License
