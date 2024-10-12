@@ -152,6 +152,8 @@ Installation
 
 * Modify the variables **USER_INFO**, **TXT_DISPLAY** and **PDF_DISPLAY** at the beginning of the script as appropriate for your environment.
 
+* The documented default value of the variable **common_strings** in the library **bparser.py** is **True**. However, some library versions instead set it to **False**- In this case, edit **bparser.py** to specify "**common_strings=True**".
+
 
 License
 -------
@@ -162,7 +164,7 @@ MIT
 Author
 ------
 
-Raffaele Guido Della Valle (raffaele.dellavalle@unibo.it, raffadella@gmail.com, https://raffaeledellavalle.neocities.org/)
+Raffaele Guido Della Valle (https://raffaeledellavalle.neocities.org/, raffaele.dellavalle@unibo.it, raffadella@gmail.com)
 
 
 Using **bib.py** as a library
