@@ -66,11 +66,11 @@ The behaviour of the script is best explained through some examples:
 
 * **bib.py** destination.bib '2005 Information loss in black holes'
 
-  Obtain BibTeX entries by querying **crossref.org** and/or **google books** for title, author, year, etc. (only one paper in this example, with the publication year) and adds them to destination.bib. The search text must be quoted (with either **"** or **'**), and must contain at least five words to be recognized. Since BibTeX entries obtained by searching for text are unreliable, they are shown on the screen and the user is prompted for confirmation. The possible choices are: **y**, **n** (obvious), **all** and **none** (always grant or deny confirmation from now on, without further prompting).
+  Obtain BibTeX entries by querying **crossref.org** and/or **google books** for title, author, year, etc. (only one paper in this example, with the publication year) and adds them to destination.bib. The search text must be quoted (with either **"** or **'**), and must contain at least five words to be recognized. Since BibTeX entries obtained by searching for text are unreliable, they are shown on the screen and the user is prompted for confirmation. The possible choices are: **y**, **n** (obvious), **Y** and **N** (always grant or deny confirmation from now on, without further prompting).
 
 * **bib.py** destination.bib hawking1992.pdf hawking2005.pdf
 
-  Scan the first two pages of each PDF file to extract anything that looks like an ISBN or a DOI, and use it to obtain a BibTeX entry. This will fail for the 1992 paper (like for most papers published before 2000). In this case the first 400 text characters (which often contains author, title, year, etc) are used to query **crossref.org** and/or **google books**. Since this method is very unreliable, the PDF file and the resulting BibTeX entry (if any) are shown on the screen. The entry is accepted only if the user confirms it. A **file** field is added to the entry, in the format used by JabRef.
+  Scan the first few pages of each PDF file to extract anything that looks like an ISBN or a DOI, and use it to obtain a BibTeX entry. This will fail for the 1992 paper (like for most papers published before 2000). In this case the first 400 text characters (which often contains author, title, year, etc) are used to query **crossref.org** and/or **google books**. Since this method is very unreliable, the PDF file and the resulting BibTeX entry (if any) are shown on the screen. The entry is accepted only if the user confirms it. A **file** field is added to the entry, in the format used by JabRef.
 
 * **bib.py** destination.bib **-yes** hawking1992.pdf hawking2005.pdf
 
@@ -82,7 +82,7 @@ The behaviour of the script is best explained through some examples:
 
 * **bib.py** destination.bib **-complete**
 
-  Attempt to add ISBN or DOI to all BibTeX entries which do not have one, by quering **google books** and **crossref.org** with year, authors and title of the publication. The user is prompted for confirmation, as above.
+  Attempt to add ISBN or DOI to all BibTeX entries which do not have one, by quering **google books** and/or **crossref.org** with year, authors and title of the publication. The user is prompted for confirmation, as above.
 
 * **bib.py** destination.bib **-rename**
 
@@ -110,9 +110,9 @@ BibTeX Field handling
 
 * Fields **doi** and **isbn**, if present, are used to uniquely identify BibTeX entries.
 
-* Fields **author**, **year** and **page** are used to identify BibTeX entries when **doi** and **isbn** are both missing.
+* Fields **author** (or **editor**), **year** and **page** are used to identify BibTeX entries when **doi** and **isbn** are both missing.
 
-* Fields **author**, **editor**, **year**, **month** and **page** are used to construct AYC (author-year-character) BibTeX keys. When the field **year** is missing, AYC keys like 'surname9900x' are used. The last two character of the 'year' are a modulo 100 checksum of the **title** field.
+* Fields **author**, **editor**, **year**, **month** and **page** are used to construct AYC (author-year-character) BibTeX keys. When the field **year** is missing, AYC keys like 'surname9900x' are used. The last two character of the 'year' are a modulo 100 checksum of the **title** field (this is to reduce the chance of key collisions).
 
 * If possible, the **file** field is created with PDF file names given on the command line. The base name of the file is changed to the AYC key if the command **-rename-files** is given.
 
