@@ -14,9 +14,9 @@ Features
 
 * DOI (Digital Object Identifier) and ISBN (International Standard Book Number) resolution.
 
-* Search **crossref.org** for title, authors, years, etc.
+* Search **crossref.org** and **google books** for title, authors, years, etc.
 
-* Extract DOI and search text from PDF files.
+* Extract DOI, ISBN and search text from PDF files.
 
 
 History and purpose
@@ -62,29 +62,29 @@ The behaviour of the script is best explained through some examples:
 
 * **bib.py** destination.bib 9780553109535 10.1103/PhysRevD.46.603
 
-  Obtain BibTeX entries for all given ISBN and DOI keys (by querying **doi.org** and/or **crossref.org**) and adds them to destination.bib.
+  Obtain BibTeX entries for all given DOI and ISBN keys (by querying **doi.org** and/or **crossref.org**) and adds them to destination.bib.
 
 * **bib.py** destination.bib '2005 Information loss in black holes'
 
-  Obtain BibTeX entries by querying **crossref.org** for paper title, author, year, etc. (only one paper in this example, with the publication year) and adds them to destination.bib. The search text must be quoted (with either **"** or **'**), and must contain at least five words to be recognized. Since BibTeX entries obtained by searching for text are unreliable, they are shown on the screen and the user is prompted for confirmation. The possible choices are: **y**, **n** (obvious), **all** and **none** (always grant or deny confirmation from now on, without further prompting).
+  Obtain BibTeX entries by querying **crossref.org** and/or **google books** for title, author, year, etc. (only one paper in this example, with the publication year) and adds them to destination.bib. The search text must be quoted (with either **"** or **'**), and must contain at least five words to be recognized. Since BibTeX entries obtained by searching for text are unreliable, they are shown on the screen and the user is prompted for confirmation. The possible choices are: **y**, **n** (obvious), **all** and **none** (always grant or deny confirmation from now on, without further prompting).
 
 * **bib.py** destination.bib hawking1992.pdf hawking2005.pdf
 
-  Scan the first two pages of each PDF file to extract anything that looks like a DOI, and use it to obtain a BibTeX entry. This will fail for the 1992 paper (like for most papers published before 2000). In this case the first 200 text characters (which often contains author, title, year, etc) are used to query **crossref.org**. Since this method is very unreliable, the PDF file and the resulting BibTeX entry (if any) are shown on the screen. The entry is accepted only if the user confirms it. A **file** field is added to the entry, in the format used by JabRef.
+  Scan the first two pages of each PDF file to extract anything that looks like an ISBN or a DOI, and use it to obtain a BibTeX entry. This will fail for the 1992 paper (like for most papers published before 2000). In this case the first 400 text characters (which often contains author, title, year, etc) are used to query **crossref.org** and/or **google books**. Since this method is very unreliable, the PDF file and the resulting BibTeX entry (if any) are shown on the screen. The entry is accepted only if the user confirms it. A **file** field is added to the entry, in the format used by JabRef.
 
-* **bib.py** destination.bib **-all** hawking1992.pdf hawking2005.pdf
+* **bib.py** destination.bib **-yes** hawking1992.pdf hawking2005.pdf
 
   Exactly the same, but all BibTeX entries obtained by searching for text are accepted without asking for confirmation.
 
-* **bib.py** destination.bib **-none** hawking1992.pdf hawking2005.pdf
+* **bib.py** destination.bib **-no** hawking1992.pdf hawking2005.pdf
 
   The opposite, text searching is disabled, and no entry obtained by searching for text is accepted. 
 
-* **bib.py** destination.bib **-doi-add**
+* **bib.py** destination.bib **-complete**
 
-  Add DOIs to all BibTeX entries which do not have one, by quering **crossref.org** with year, authors and title of the papers. The user is prompted for confirmation, as above.
+  Attempt to add ISBN or DOI to all BibTeX entries which do not have one, by quering **google books** and **crossref.org** with year, authors and title of the publication. The user is prompted for confirmation, as above.
 
-* **bib.py** destination.bib **-rename-files**
+* **bib.py** destination.bib **-rename**
 
   Files indicated in **file** fields and PDF files given as command line arguments are renamed to match the AYC (author-year-character) key which, as already mentioned, is used as default basename.  If the AYC is 'surname2010x' and the **file** field contains 'whatever.pdf', then all files starting with 'whatever' are renamed: 'whatever.pdf', 'whatever.txt', 'whatever-SI.doc' and 'whatever-01.dat' become 'surname2010x.pdf', 'surname2010x.txt', 'surname2010x-SI.doc' and 'surname2010x-01.dat'.
 
@@ -94,15 +94,15 @@ The behaviour of the script is best explained through some examples:
 
 * **bib.py** destination.bib /home/user/path/\*.pdf
 
-  Add to destination.bib all BibTeX entries obtained from DOI or search text extracted from all given PDF files. Created **file** fields will contain absolute paths, since file names start with **/**.
+  Add to destination.bib all BibTeX entries obtained from ISBN, DOI or search text extracted from all given PDF files. Created **file** fields will contain absolute paths, since file names start with **/**.
 
 * **bib.py** destination.bib path/\*.pdf
 
-  Add to destination.bib all BibTeX entries obtained from DOI or search text extracted from all given PDF files. Created **file** fields will contain relative paths, since file names DO NOT start with **/**. With JabRef, this corresponds to the setting 'Options / Preferences / File / Use the BIB file location as primary file directory'. 
+  Add to destination.bib all BibTeX entries obtained from ISBN, DOI or search text extracted from all given PDF files. Created **file** fields will contain relative paths, since file names DO NOT start with **/**. With JabRef, this corresponds to the setting 'Options / Preferences / File / Use the BIB file location as primary file directory'. 
 
-* **bib.py** destination.bib **-none** path/\*.pdf
+* **bib.py** destination.bib **-no** path/\*.pdf
 
-  Add to destination.bib all BibTeX entries obtained from DOI extracted from all given PDF files. Text searching is disabled since **-none** has been given. Only the first letter of the command is actually required (and checked): **-none**, **-all**, **-doi-add** and **-rename-files** may be shortened to **-n**, **-a**, **-d** and **-r**.
+  Add to destination.bib all BibTeX entries obtained from ISBN or DOI extracted from all given PDF files. Text searching is disabled since **-no** has been given. Only the first letter of the command is actually required (and checked): **-no**, **-yes**, **-complete** and **-rename** may be shortened to **-n**, **-y**, **-c** and **-r**.
   
 
 BibTeX Field handling
@@ -112,11 +112,11 @@ BibTeX Field handling
 
 * Fields **author**, **year** and **page** are used to identify BibTeX entries when **doi** and **isbn** are both missing.
 
-* Fields **author**, **editor**, **year**, **month** and **page** are used to construct AYC (author-year-character) BibTeX keys.
+* Fields **author**, **editor**, **year**, **month** and **page** are used to construct AYC (author-year-character) BibTeX keys. When the field **year** is missing, AYC keys like 'surname9900x' are used. The last two character of the 'year' are a modulo 100 checksum of the **title** field.
 
 * If possible, the **file** field is created with PDF file names given on the command line. The base name of the file is changed to the AYC key if the command **-rename-files** is given.
 
-* If the **doi** field is missing and the command **-doi-add** is given, fields **author**, **year** and **title** are used to discover the DOI.
+* If the **isbn** and **doi** field are missing and the command **-complete** is given, fields **author**, **year** and **title** are used to discover the actual ISBN and/or DOI.
 
 * The **url** field is deleted if it actually contains a DOI and a **doi** field exists.
 
@@ -136,7 +136,7 @@ Requirements
 
 * python3
 
-* **subprocess**, **urllib**, **requests**, **bibtexparser** and **isbnlib** (python packages)
+* **subprocess**, **urllib**, **requests**, **bibtexparser**, **functools** and **isbnlib** (python packages)
 
 * **pdftotext** and **rename** (command line tools, the latter is also known as **perl-rename**)
 
