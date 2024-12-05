@@ -102,7 +102,7 @@ The behaviour of the script is best explained through some examples:
 
 * **bib.py** destination.bib **-no** path/\*.pdf
 
-  Add to destination.bib all BibTeX entries obtained from ISBN or DOI extracted from all given PDF files. Text searching is disabled since **-no** has been given. Only the first letter of the command is actually checked: **-no**, **-yes**, **-complete** and **-rename** may be shortened to **-n**, **-y**, **-c** and **-r**. Lower and upper case are equivalent: **-N** is the same as **-n**.
+  Add to destination.bib all BibTeX entries obtained from ISBN or DOI extracted from all given PDF files. Text searching is disabled since **-no** has been given. Only the first letter of the command is actually checked: **-no**, **-yes**, **-complete** and **-rename** may be shortened to **-n**, **-y**, **-c** and **-r**. Upper and lower cases are equivalent: **-N** is the same as **-n**.
   
 
 BibTeX Field handling
