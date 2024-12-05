@@ -14,7 +14,7 @@ Features
 
 * DOI (Digital Object Identifier) and ISBN (International Standard Book Number) resolution.
 
-* Search **crossref.org** and **google books** for title, authors, years, etc.
+* Search **crossref.org** and **google books** for authors, title, year, etc.
 
 * Extract DOI, ISBN and search text from PDF files.
 
@@ -60,7 +60,7 @@ The behaviour of the script is best explained through some examples:
 
   Each distinct entry receives a unique AYC (author-year-character) key of the form 'surname2010x', containing the surname of the first author (the editor if there is no author) converted to lower-case with non alphabetic characters removed, the publication year, and a final character in **a** **b** ... **l** to indicate the publication month **jan** **feb** ... **dec** if available, or the last digit **0** **1** ... **9** of the page if available, or **m** if both are unavailable. In case of collisions, successive characters **n** **o** **p** ... **z** are used to ensure an unique AYC key. Whenever necessary, the AYC key is used as default file basename.
 
-* **bib.py** destination.bib 9780553109535 10.1103/PhysRevD.46.603
+* **bib.py** destination.bib 10.1103/PhysRevD.46.603 9780553109535
 
   Obtain BibTeX entries for all given DOI and ISBN keys (by querying **doi.org** and/or **crossref.org**) and adds them to destination.bib.
 
@@ -102,7 +102,7 @@ The behaviour of the script is best explained through some examples:
 
 * **bib.py** destination.bib **-no** path/\*.pdf
 
-  Add to destination.bib all BibTeX entries obtained from ISBN or DOI extracted from all given PDF files. Text searching is disabled since **-no** has been given. Only the first letter of the command is actually required (and checked): **-no**, **-yes**, **-complete** and **-rename** may be shortened to **-n**, **-y**, **-c** and **-r**.
+  Add to destination.bib all BibTeX entries obtained from ISBN or DOI extracted from all given PDF files. Text searching is disabled since **-no** has been given. Only the first letter of the command is actually checked: **-no**, **-yes**, **-complete** and **-rename** may be shortened to **-n**, **-y**, **-c** and **-r**. Lower and upper case are equivalent: **-N** is the same as **-n**.
   
 
 BibTeX Field handling
@@ -110,7 +110,7 @@ BibTeX Field handling
 
 * Fields **doi** and **isbn**, if present, are used to uniquely identify BibTeX entries.
 
-* Fields **author** (or **editor**), **year** and **page** are used to identify BibTeX entries when **doi** and **isbn** are both missing.
+* Fields **author** (or **editor**, if **author** is missing), **year** and **page** are used to identify BibTeX entries when **doi** and **isbn** are both missing.
 
 * Fields **author**, **editor**, **year**, **month** and **page** are used to construct AYC (author-year-character) BibTeX keys. When the field **year** is missing, AYC keys like 'surname9900x' are used. The last two character of the 'year' are a modulo 100 checksum of the **title** field (this is to reduce the chance of key collisions).
 
