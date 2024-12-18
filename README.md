@@ -110,11 +110,11 @@ BibTeX Field handling
 
 * Fields **author**, **editor**, **year**, **month**, **page** and **title** are used to construct AYC (author-year-character) BibTeX keys. When the field **year** is missing, AYC keys like 'surname9000x' are used. The last three character of the 'year' are a modulo 1000 checksum of the **title** field, converted to lower cases and with non-alphanumeric characters removed.
 
-* Fields **doi** and **isbn**, if present, are used to uniquely identify BibTeX entries. If both are missing, the AYC key is used instead. Since the AYC key is not guaranteed to be unique, collisions are possible (although very unlikely).
+* Fields **doi** and **isbn**, if present, are used to uniquely identify BibTeX entries. If both are missing, fields **author** (or **editor**), **year** and **title** are instead used to identify entries.
 
 * If possible, the **file** field is created with PDF file names given on the command line. The base name of the file is changed to the AYC key if the command **-rename-files** is given.
 
-* If the **isbn** and **doi** field are missing and the command **-complete** is given, fields **author**, **year** and **title** are used to discover the actual ISBN and/or DOI.
+* If the **isbn** and **doi** field are missing and the command **-complete** is given, fields **author**, **year** and **title** are used to attempt to discover the actual ISBN and/or DOI.
 
 * The **url** field is deleted if it actually contains a DOI and a **doi** field exists.
 
