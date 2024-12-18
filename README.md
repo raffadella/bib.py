@@ -56,9 +56,9 @@ The behaviour of the script is best explained through some examples:
 
 * **bib.py** destination.bib source1.bib source2.bib source3.bib
 
-  Combines BibTeX files: destination.bib receives BibTeX entries from all files. Entries are considered duplicated if they have the same DOI, or the same ISBN, or the same author-year-page combination (if DOI and ISBN are both missing). Only the first of a set of duplicated entries is kept, except for missing fields (if any) which are taken from later entries.
+  Combines BibTeX files: destination.bib receives BibTeX entries from all files. Entries are considered duplicated if they have the same DOI, or the same ISBN or, if DOI and ISBN are both missing, the same first author, year and title. Only the first of a set of duplicated entries is kept, except for missing fields (if any) which are taken from later entries.
 
-  Each distinct entry receives a unique AYC (author-year-character) key of the form 'surname2010x', containing the surname of the first author (the editor if there is no author) converted to lower-case with non alphabetic characters removed, the publication year, and a final character in **a** **b** ... **l** to indicate the publication month **jan** **feb** ... **dec** if available, or the last digit **0** **1** ... **9** of the page if available, or **m** if both are unavailable. In case of collisions, successive characters **n** **o** **p** ... **z** are used to ensure an unique AYC key. Whenever necessary, the AYC key is used as default file basename.
+  Each distinct (i.e. non duplicated) entry receives an AYC (author-year-character) key of the form 'surname2010x', containing the surname of the first author (the editor if there is no author) converted to lower-case with non alphabetic characters removed, the publication year, and a final character that guarantees unicity. This character is **a** **b** ... **l** to indicate the publication month **jan** **feb** ... **dec** if available, or the last digit **0** **1** ... **9** of the page if available or, if both are unavailable, a letter from **m** to **z** based on a modulo 13 checksum of the title. A still unused letter from **a** to **z** is used in case of a collision (distinct entries which would otherwise have the same AYC keys). Whenever necessary, the AYC key is used as default file basename.
 
 * **bib.py** destination.bib 10.1103/PhysRevD.46.603 9780553109535
 
@@ -86,7 +86,7 @@ The behaviour of the script is best explained through some examples:
 
 * **bib.py** destination.bib **-rename**
 
-  Files indicated in **file** fields and PDF files given as command line arguments are renamed to match the AYC (author-year-character) key which, as already mentioned, is used as default basename.  If the AYC is 'surname2010x' and the **file** field contains 'whatever.pdf', then all files starting with 'whatever' are renamed: 'whatever.pdf', 'whatever.txt', 'whatever-SI.doc' and 'whatever-01.dat' become 'surname2010x.pdf', 'surname2010x.txt', 'surname2010x-SI.doc' and 'surname2010x-01.dat'.
+  Files indicated in **file** fields and PDF files given as command line arguments are renamed to match the AYC (author-year-character) key which, as already mentioned, is used as default basename.  If the AYC is 'surname2010x' and the **file** field contains 'whatever.pdf', then all files starting with 'whatever' are renamed: 'whatever.pdf', 'whatever.txt' and 'whatever-01.dat' become 'surname2010x.pdf', 'surname2010x.txt' and 'surname2010x-01.dat'.
 
 * **bib.py** destination.bib text-file
 
@@ -108,11 +108,9 @@ The behaviour of the script is best explained through some examples:
 BibTeX Field handling
 ---------------------
 
-* Fields **doi** and **isbn**, if present, are used to uniquely identify BibTeX entries.
+* Fields **author**, **editor**, **year**, **month**, **page** and **title** are used to construct AYC (author-year-character) BibTeX keys. When the field **year** is missing, AYC keys like 'surname9000x' are used. The last three character of the 'year' are a modulo 1000 checksum of the **title** field, converted to lower cases and with non-alphanumeric characters removed.
 
-* Fields **author** (or **editor**, if **author** is missing), **year** and **page** are used to identify BibTeX entries when **doi** and **isbn** are both missing.
-
-* Fields **author**, **editor**, **year**, **month** and **page** are used to construct AYC (author-year-character) BibTeX keys. When the field **year** is missing, AYC keys like 'surname9900x' are used. The last two character of the 'year' are a modulo 100 checksum of the **title** field (this is to reduce the chance of key collisions).
+* Fields **doi** and **isbn**, if present, are used to uniquely identify BibTeX entries. If both are missing, the AYC key is used instead. Since the AYC key is not guaranteed to be unique, collisions are possible (although very unlikely).
 
 * If possible, the **file** field is created with PDF file names given on the command line. The base name of the file is changed to the AYC key if the command **-rename-files** is given.
 

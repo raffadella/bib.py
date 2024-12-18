@@ -19,9 +19,9 @@ from typing import Any, Dict, List
 
 import subprocess
 import urllib
+import functools
 import requests
 import bibtexparser
-import functools
 import isbnlib
 
 # Items for local configuration: email and other info of the user, and
@@ -42,7 +42,7 @@ MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun',
           'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
 
 # A regular expression (RE) matching a key (either ISBN or DOI)
-KEY_RE = r'\b(ISBN(-10|-13|)[:\s]+\d[\d -]{8,15}[\dX]|10\.\d{4,}/[A-Za-z\d()[\]{}<>%._/#:;-]+[A-Za-z\d])\b'
+KEY_RE = r'\b(ISBN(-10|-13|)[:\s]+\d[\d -]{8,15}[\dX]|10\.\d{4,}/[\w()[\]{}<>%./#:;-]+[A-Za-z\d])\b'
 
 # NOTE 1: In this code we deliberately use mutable defaults to memorize
 # INITIALLY EMPTY PRIVATE lists and dictionaries (either [] or {}).
@@ -50,7 +50,6 @@ KEY_RE = r'\b(ISBN(-10|-13|)[:\s]+\d[\d -]{8,15}[\dX]|10\.\d{4,}/[A-Za-z\d()[\]{
 
 # NOTE 2: The following kinds of key, val pairs are used through record()
 # 'all_confirm'  True or False to confirm 'YES' or 'NO' text queries
-# 'unique_int'   successive negative integers, used as unique keys
 # 'item_str'     item string (to print item trace)
 # 'entries_int'  number of accumulated BibTeX entries (to print item trace)
 
@@ -71,41 +70,6 @@ def re_find(txt: str, regexp: str, i: int = 0) -> str:
     return ''
 
 
-def make_ay_key(entry: BibEntry) -> str:
-    """Make AY (author-year) partial key, with surname of the first author
-       (lower-case, non alphabetic characters removed) and publication year.
-       For empty years, use 9900 plus the mod 100 checksum of the title."""
-    author = entry.get('author') or entry.get('editor', 'unknown')
-    author = re_find(author, '^(.*?)( and |$)', 1)
-    au_dict = bibtexparser.customization.splitname(author, strict_mode=False)
-    author = ' '.join(au_dict['last'])
-
-    author = re_strip(author.lower(), r'\\[a-hj-z][a-z]*', r'[^a-z]')
-    year = re_find(entry.get('year', ''), r'\d{4}')
-
-    if not year:
-        title = entry.get('title', '')
-        year = functools.reduce(lambda nm, ch: (nm + ord(ch)) % 100, title, 0)
-        year = f'99{year:02d}'
-
-    return author + year
-
-
-def make_pm_key(entry: BibEntry) -> str:
-    """Make PM (page-month) partial key, with the first page (if available)
-       and a final character in 'a b ... l' to indicate the publication month
-       'jan feb ... dec' (if available). Return 'm' if both are unavailable."""
-    page = re_find(entry.get('pages', ''), r'[0-9]+')
-    if 'month' in entry:
-        month = entry['month']
-        if re.match(r'^(0?[1-9]|1[012])$', month):
-            imonth = int(month) - 1
-        else:
-            imonth = MONTHS.index(month[:3].lower())
-        page += chr(imonth + ord('a'))
-    return page or 'm'
-
-
 def record(key: Any, val: Any = None, default: Any = None,
            memo_dict: Dict[Any, Any] = {}) -> Any:
     """Record a mapping in an INITIALLY EMPTY PRIVATE dictionary. If val is
@@ -117,40 +81,65 @@ def record(key: Any, val: Any = None, default: Any = None,
     return val
 
 
-def make_safe_key(entry: BibEntry) -> str:
-    """Make safe key: DOI or ISBN string if available, or unique '-1', '-2' ..."""
-    return (entry.get('doi') or
-            entry.get('isbn') or
-            str(record('unique_int', record('unique_int', default=0) - 1))).lower()
+def str2chksum(txt: str, divisor: int) -> int:
+    """Return the checksum of a string, modulo the given divisor. The string is
+    first converted to lower case, with non alphanumeric characters removed."""
+    txt = re_strip(txt.lower(), r'[^a-z0-9 ]')
+    return functools.reduce(lambda nm, ch: (nm + ord(ch)) % divisor, txt, 0)
 
 
-def make_unsafe_key(entry: BibEntry) -> str:
-    """Make unsafe key. DOI and ISBN are safe keys which uniquely identify
-       a publication, but may be absent. This function returns the AYP
-       (author-year-page) combination, which MIGHT be unique."""
-    return make_ay_key(entry) + re_find(entry.get('pages', '0'), r'[0-9]+')
+def make_ay_key(entry: BibEntry) -> str:
+    """Make AY (author-year) partial key, with surname of the first author
+       (lower-case, non alphabetic characters removed) and publication year.
+       For empty years, use 9900 plus the modulo 1000 checksum of the title."""
+    author = entry.get('author') or entry.get('editor', 'unknown')
+    author = re_find(author, '^(.*?)( and |$)', 1)
+    au_dict = bibtexparser.customization.splitname(author, strict_mode=False)
+    author = ' '.join(au_dict['last'])
+    author = re_strip(author.lower(), r'\\[a-hj-z][a-z]*', r'[^a-z]')
+    year = re_find(entry.get('year', ''), r'\d{4}')
+    if not year:
+        year = f'9{str2chksum(entry.get("title", ""), 1000):03d}'
+    return author + year
 
 
-def make_ayc_key(entry: BibEntry, next_char: Dict[str, str] = {}) -> str:
-    """Make AYC (author-year-character) unique key. Like make_ay_key() with a
-       final character in 'a b ... l' to indicate the publication month 'jan
-       feb ... dec' if available, or the last digit '0 1 ... 9' of the page
-       if available, or 'm' if both are unavailable. In case of collisions,
-       successive characters 'n o p q ..." are used to ensure an unique
-       key. An INITIALLY EMPTY PRIVATE dictionary is used store the next
-       free character to be used, with the default AYC as the key."""
+def make_char_key(entry: BibEntry) -> str:
+    """Make single character partial key: 'a b ... l' for the publication month
+       'jan feb ... dec' (if available); or the LAST digit of the FIRST page
+       (if available); or 'm n ... z' from the modulo 13 checksum of the title."""
+    if 'month' in entry:
+        month = entry['month']
+        if re.match(r'^(0?[1-9]|1[012])$', month):
+            imonth = int(month) - 1
+        else:
+            imonth = MONTHS.index(month[:3].lower())
+        return chr(imonth + ord('a'))
+    page = re_find(entry.get('pages', ''), r'\d*(\d)', 1)
+    if page:
+        return page
+    return chr(ord('m') + str2chksum(entry.get('title', ''), 13))
+
+
+def make_ayc_key(entry: BibEntry) -> str:
+    """Make AYC (author-year-character) key. Like make_ay_key() with the
+       final character discussed for make_char_key(). To avoid overwrites,
+       return existing AYC if already present with correct author and year."""
     author_year = make_ay_key(entry)
-    page_month = make_pm_key(entry)
-    char = page_month[-1]
+    if author_year == entry['ID'][:-1]:
+        return entry['ID']
+    char = make_char_key(entry)
     ayc_key = author_year + char
-    if ayc_key in next_char:
-        char = next_char[ayc_key]
-        next_char[ayc_key] = chr(ord(char) + 1)
-        ayc_key = author_year + char
-    else:
-        next_char[ayc_key] = 'n'
-    assert re.match(r'^[0-9a-z]$', char), 'Too many bib entries with the same author-year-character'
     return ayc_key
+
+
+def make_safe_key(entry: BibEntry) -> str:
+    """Make key: DOI or ISBN string if available, otherwise first author, plus
+       year, plus title (in lower case with non alphanumeric characters removed).
+       DOI and ISBN uniquely identify a publication and thus are safe keys, but
+       may be absent. The author-year-title key used as fallback SHOULD be safe."""
+    return ( entry.get('doi') or
+             entry.get('isbn') or
+             make_ay_key(entry) + re_strip(entry.get("title", "").lower(), r'[^a-z0-9 ]') )
 
 
 def user_confirm(bib: str, filename: str) -> Any:
@@ -174,8 +163,10 @@ def user_confirm(bib: str, filename: str) -> Any:
 
 
 def doi2str(doi: str, url: str) -> str:
-    """Insert DOI at {} in URL, query URL and return BibTeX entry as a string"""
+    """Given DOI string, insert at {} in URL, query URL and return BibTeX
+       entry as a string if successful, otherwise return empty string."""
     response = requests.get(url.format(doi),
+                            timeout=10,
                             headers={'accept': 'application/x-bibtex'})
     if response.status_code == 200:
         return response.text
@@ -235,7 +226,7 @@ def item2str(txt: str, filename: str = '', entries: List[BibEntry] = []) -> str:
     if len(txt) < 1:
         return ''
     item_trace(txt=txt)
-    if re.match(r'10\.\d{4,}/[A-Za-z\d()[\]{}<>%._/#:;-]+[A-Za-z\d]', txt):
+    if re.match(r'^10\.\d{4,}/[\w()[\]{}<>%./#:;-]+[A-Za-z\d]', txt):
         return doi2str(txt, XREF_URL) or doi2str(txt, DOI_URL)
     if re.match(r'^\d[\d -]{8,15}[\dX]$', txt):
         return isbn2str(txt, 'openl') or isbn2str(txt, 'goob')
@@ -273,7 +264,7 @@ def query2str(txt: str, filename: str) -> str:
 
     doi = re_find(txt, r'{"DOI":"(10\.\d{4,}[^"]+)"}', 1)
     doi = doi.replace(r'\/', '/')
-    bib = doi2str(doi)
+    bib = item2str(doi)
     if bib and (record('all_confirm') or user_confirm(bib, filename)):
         return bib
     return ''
@@ -290,7 +281,7 @@ def pdf2str(filename: str) -> str:
 
     key = re_find(txt, KEY_RE, 1)
     if key:
-        key = re_strip(key, '^ISBN(-10|-13|)[:\s]+')
+        key = re_strip(key, r'^ISBN(-10|-13|)[:\s]+')
         return item2str(key.replace(r' ', ''))
 
     return query2str(re_find(txt, r'^[\S\s]{1,400}[^ ]*'), filename=filename)
@@ -348,31 +339,52 @@ def rename_files(entries: List[BibEntry]) -> None:
 def cleanup_entry(entry: BibEntry, item: str) -> None:
     """Clean DOI, delete URLs which are DOIs, add FILE if available"""
     if 'doi' in entry:
-        entry['doi'] = re_find(entry['doi'], r'10\.\d{4,}/[A-Za-z\d()[\]{}<>%._/#:;-]+[A-Za-z\d]')
+        entry['doi'] = re_find(entry['doi'], r'10\.\d{4,}/[\w()[\]{}<>%./#:;-]+[A-Za-z\d]')
     if 'url' in entry and re.search(r'[/.]doi[/.].*10\.\d\d\d\d', entry['url']):
         del entry['url']
     if re.search(r'(?i)\.pdf$', item):
         jabfile(entry, item)
 
 
+def next_letter(chars: str) -> str:
+    """Starting from the last character of a string, return the next
+    'a'...'z' letter (in cyclic order) not already present in the string."""
+    assert len(chars) < 25, "Too many AYC collisions (more than 25)"
+    n = ord(chars[-1]) - ord("a")
+    while True:
+        n = (n + 1) % 25
+        ch = chr(n + ord("a"))
+        if ch not in chars:
+            return ch
+
 def add2database(entries: List[BibEntry], entry: BibEntry, item: str,
                  memo_dict: Dict[str, int] = {}) -> None:
-    """Append one BibTeX entry to list of entries (if not there already),
-       or just add any missing field (otherwise). An INITIALLY EMPTY PRIVATE
-       dictionary is used to index the list, with both safe (DOI or ISBN) and
-       unsafe AYP (author-year-page) keys. The value associated to a key is
-       the position (the index) of the corresponding entry in the list."""
+    """Append one BibTeX entry to list of entries (if not there already), or
+       just add any missing field (otherwise). An INITIALLY EMPTY PRIVATE
+       dictionary is used to index the list, with a safe key (DOI, ISBN, or
+       AYC plus title). The value associated to the key is the position (the
+       index) of the corresponding entry in the list. The AYC key is also
+       stored in the dictionary to discover collisions. In case of an AYC
+       collision, select the next unused 'a'...'z' letter (in cyclic order)."""
     cleanup_entry(entry, item)
     safe_key = make_safe_key(entry)
-    unsafe_key = make_unsafe_key(entry)
-    num = memo_dict.get(safe_key) or memo_dict.get(unsafe_key)
+    num = memo_dict.get(safe_key)
     if num is not None:
         for field, value in entry.items():
             if field != 'ID' and field not in entries[num]:
                 entries[num][field] = value
     else:
-        entry['ID'] = make_ayc_key(entry)
-        memo_dict[unsafe_key] = memo_dict[safe_key] = len(entries)
+        ayc_key = make_ayc_key(entry)
+
+        if ayc_key in memo_dict:
+            ch = next_letter(memo_dict[ayc_key])
+            memo_dict[ayc_key] += ch
+            ayc_key = ayc_key[:-1] + ch
+        else:
+            memo_dict[ayc_key] = ayc_key[-1]
+
+        entry['ID'] = ayc_key
+        memo_dict[safe_key] = len(entries)
         entries.append(entry)
 
 
@@ -405,10 +417,10 @@ are accepted only if the user confirms them (unless preempted by -yes or
 -no). The first argument MUST be a bibtex file, which is read if existing
 or created if not, and which receives all obtained BibTeX entries."""
 
-    # No arguments: display usage message
+    # No arguments: display function "__doc__" string as an usage message
     if len(items) < 1:
         print(main.__doc__)
-        exit(1)
+        sys.exit(1)
 
     # The first argument must match '*.bib' or '*.bibtex'
     assert re.search(r'(?i)\.bib(tex)?$', items[0]), f"First argument '{items[0]}' is not a BibTeX file"
