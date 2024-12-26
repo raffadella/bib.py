@@ -46,7 +46,7 @@ KEY_RE = r'\b(ISBN(-10|-13|)[:\s]+\d[\d -]{8,15}[\dX]|10\.\d{4,}/[\w()[\]{}<>%./
 
 # NOTE 1: In this code we deliberately use mutable defaults to memorize
 # INITIALLY EMPTY PRIVATE lists and dictionaries (either [] or {}).
-# The pylint3 complaints about dangerous-default-value are irrelevant.
+# The pylint complaints about dangerous-default-value are irrelevant.
 
 # NOTE 2: The following kinds of key, val pairs are used through record()
 # 'all_confirm'  True or False to confirm 'YES' or 'NO' text queries
@@ -81,22 +81,37 @@ def record(key: Any, val: Any = None, default: Any = None,
     return val
 
 
+def alphabetic(txt: str, chrmap=[]) -> str:
+    """Convert string to alphabetic characters. An initially empty private
+       character map is filled up and used to convert letters with diacritical
+       marks to their normal equivalents. Diacritics such as \v{c} and all non
+       alphabetic characters are stripped. Return the string in lower case."""
+    if chrmap == []:
+        chrmap = [chr(i) for i in range(256)]
+        chrs1 = "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ"
+        chrs2 = "AAAAAAACEEEEIIIIDNOOOOO.OUUUUYTsaaaaaaaceeeeiiiidnooooo:ouuuuyty"
+        for (c1,c2) in zip(chrs1,chrs2):
+            chrmap[ord(c1)] = c2
+    txt = ''.join([chrmap[ord(c1)] for c1 in txt])
+    return re_strip(txt, r'\\[utrdcvHkb]\{', r'[^A-Za-z]').lower() 
+
+
 def str2chksum(txt: str, divisor: int) -> int:
     """Return the checksum of a string, modulo the given divisor. The string is
-    first converted to lower case, with non alphanumeric characters removed."""
-    txt = re_strip(txt.lower(), r'[^a-z0-9 ]')
+    first converted to lower case, with non alphabetic characters removed."""
+    txt = alphabetic(txt)
     return functools.reduce(lambda nm, ch: (nm + ord(ch)) % divisor, txt, 0)
 
 
 def make_ay_key(entry: BibEntry) -> str:
     """Make AY (author-year) partial key, with surname of the first author
-       (lower-case, non alphabetic characters removed) and publication year.
+       (lower-case, non alphabetic characters stripped) and publication year.
        For empty years, use 9900 plus the modulo 1000 checksum of the title."""
     author = entry.get('author') or entry.get('editor', 'unknown')
     author = re_find(author, '^(.*?)( and |$)', 1)
     au_dict = bibtexparser.customization.splitname(author, strict_mode=False)
     author = ' '.join(au_dict['last'])
-    author = re_strip(author.lower(), r'\\[a-hj-z][a-z]*', r'[^a-z]')
+    author = alphabetic(author)
     year = re_find(entry.get('year', ''), r'\d{4}')
     if not year:
         year = f'9{str2chksum(entry.get("title", ""), 1000):03d}'
@@ -213,8 +228,8 @@ def command(txt: str, entries: List[BibEntry]) -> str:
         return add_doi_isbn(entries=entries)
     if re.match(r'^[rR]', txt):
         rename_files(entries=entries)
-    if re.match(r'^[YN]', txt):
-        record('all_confirm', txt[0] == 'Y')
+    if re.match(r'^[yYnN]', txt):
+        record('all_confirm', txt[0].lower() == 'y')
     return ''
 
 
@@ -238,11 +253,23 @@ def item2str(txt: str, filename: str = '', entries: List[BibEntry] = []) -> str:
 
 
 def query2str(txt: str, filename: str) -> str:
-    """Given a search text, query Google Books to obtain a likely ISBN, on
-       failure query CROSSREF to obtain a likely DOI. Convert to BibTeX entry
-       as a string, and return it. Queries fail if not confirmed by the user."""
+    """Given a search text, return a BibTeX entry as a string. Try to extract
+       anything that looks like an ISBN or a DOI and search for that. Failing
+       this, use about 400 characters as search text. Query Google Books to
+       obtain a likely ISBN, on failure query CROSSREF to obtain a likely
+       DOI, and search for that. Queries fail if not confirmed by the user."""
+    if len(txt) < 13:
+        return ''
+
+    key = re_find(txt, KEY_RE, 1)
+    if key:
+        key = re_strip(key, r'^ISBN(-10|-13|)[:\s]+')
+        return item2str(key.replace(r' ', ''))
+
     if record('all_confirm') is False:
         return ''
+
+    txt = re_find(txt, r'^[\S\s]{1,400}[^ ]*')
 
     bib = isbn2str(isbnlib.isbn_from_words(txt))
     if bib and (record('all_confirm') or user_confirm(bib, filename)):
@@ -269,22 +296,11 @@ def query2str(txt: str, filename: str) -> str:
         return bib
     return ''
 
-
 def pdf2str(filename: str) -> str:
-    """Given a PDF file, return a BibTeX entry as a string. Extract from first
-       5000 characters of a PDF file anything that looks like an ISBN or a DOI,
-       if possible. Otherwise, use about 400 characters as search text."""
+    """Given a PDF file, return a BibTeX entry as a string. Just extract from
+       first 5000 characters of the PDF file and pass everything to query2str()."""
     txt = os.popen(f"pdftotext -enc ASCII7 -nopgbrk -q -l 8 {filename} -").read()[:5000]
-
-    if not txt or len(txt) < 13:
-        return ''
-
-    key = re_find(txt, KEY_RE, 1)
-    if key:
-        key = re_strip(key, r'^ISBN(-10|-13|)[:\s]+')
-        return item2str(key.replace(r' ', ''))
-
-    return query2str(re_find(txt, r'^[\S\s]{1,400}[^ ]*'), filename=filename)
+    return query2str(txt, filename=filename)
 
 
 def file2str(filename: str) -> str:
@@ -293,7 +309,7 @@ def file2str(filename: str) -> str:
        paragraphs (if possible) or by lines (otherwise), convert each fragment
        to a BibTeX entry as a string and return all concatenated entries."""
     try:
-        with open(filename) as infile:
+        with open(filename, encoding = 'utf8') as infile:
             if re.search(r'(?i)\.bib(tex)?$', filename):
                 return infile.read()
             if re.search(r'(?i)\.pdf$', filename):
@@ -333,7 +349,7 @@ def rename_files(entries: List[BibEntry]) -> None:
             newroot = entry['ID']
             jabfile(entry, os.path.join(head, newroot + ext))
             if root != newroot:
-                os.system(f"rename -r 's:{root}:{newroot}:' '{os.path.join(head, root)}'[._-]*")
+                os.system(f"rename 's:{root}:{newroot}:' '{os.path.join(head, root)}'[._-]*")
 
 
 def cleanup_entry(entry: BibEntry, item: str) -> None:
@@ -441,7 +457,7 @@ or created if not, and which receives all obtained BibTeX entries."""
 
     # Dump final database if not empty
     if bibtex_database.entries:
-        with open(items[0], 'w') as outfile:
+        with open(items[0], 'w', encoding = 'utf8') as outfile:
             bibtexparser.dump(bibtex_database, outfile)
     item_trace(txt='Total')
 
