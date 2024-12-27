@@ -112,7 +112,7 @@ BibTeX Field handling
 
 * Fields **doi** and **isbn**, if present, are used to uniquely identify BibTeX entries. If both are missing, fields **author** (or **editor**), **year** and **title** are instead used to identify entries.
 
-* If possible, the **file** field is created with PDF file names given on the command line. The base name of the file is changed to the AYC key if the command **-rename-files** is given.
+* If possible, the **file** field is created with PDF file names given on the command line. The base name of the file is changed to the AYC key if the command **-rename** is given.
 
 * If the **isbn** and **doi** field are missing and the command **-complete** is given, fields **author**, **year** and **title** are used to attempt to discover the actual ISBN and/or DOI.
 

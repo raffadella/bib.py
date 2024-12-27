@@ -85,11 +85,13 @@ def alphabetic(txt: str, chrmap=[]) -> str:
     """Convert string to alphabetic characters. An initially empty private
        character map is filled up and used to convert letters with diacritical
        marks to their normal equivalents. Diacritics such as \v{c} and all non
-       alphabetic characters are stripped. Return the string in lower case."""
+       alphabetic characters are stripped. Return the string in lower case.
+       Unicode blocks Latin-1 Supplement (some characters in \u0080-\u00ff)
+       and Latin Extended-A (all characters in \u0100-\u017f) are included."""
     if chrmap == []:
-        chrmap = [chr(i) for i in range(256)]
-        chrs1 = "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ"
-        chrs2 = "AAAAAAACEEEEIIIIDNOOOOO.OUUUUYTsaaaaaaaceeeeiiiidnooooo:ouuuuyty"
+        chrmap = [chr(i) for i in range(128*3)]
+        chrs1 = "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒœŔŕŖŗŘřŚśŜŝŞşŠšŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ"
+        chrs2 = "AAAAAAACEEEEIIIIDNOOOOO.OUUUUYTsaaaaaaaceeeeiiiidnooooo:ouuuuytyAaAaAaCcCcCcCcDdDdEeEeEeEeEeGgGgGgGgHhHhIiIiIiIiIiIiJjKkkLlLlLlLlLlNnNnNnnEeOoOoOoOoRrRrRrSsSsSsSsTtTtTtUuUuUuUuUuUuWwYyYZzZzZzs"
         for (c1,c2) in zip(chrs1,chrs2):
             chrmap[ord(c1)] = c2
     txt = ''.join([chrmap[ord(c1)] for c1 in txt])
