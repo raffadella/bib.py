@@ -71,10 +71,10 @@ The behaviour of the script is best explained through some examples:
 * **bib.py** *destination.bib "The King James Version of the Bible.epub"*
 
   Build a BibTeX entry with the metadata of an EBOOK. Accepted file formats include AZW, DOCX, EPUB, MOBI, ODT and RTF.
-
+  
 * **bib.py** *destination.bib '2005 Information loss in black holes'*
 
-  Obtain BibTeX entries by querying **crossref.org** and/or **google books** for title, author, year, etc. (only one paper in this example, with the publication year) and adds them to *destination.bib*. The search text must be quoted (as **'...'**), and must contain at least five words to be recognized. Since BibTeX entries obtained by searching for text are unreliable, they are shown on the screen and the user is prompted for confirmation. The possible choices are: **y**, **n** (obvious), **Y** and **N** (always grant or deny confirmation from now on, without further prompting).
+  Obtain a BibTeX entry by querying **crossref.org** and/or **google books** for title, author, year, *etc.* and add it to *destination.bib*. The search text must be quoted (as **'...'**), and must contain at least five words to be recognized. Since BibTeX entries obtained by searching for text are unreliable, they are shown on the screen and the user is prompted for confirmation. The possible choices are: **y**, **n** (obvious), **Y** and **N** (always grant or deny confirmation from now on, without further prompting).
 
 * **bib.py** *destination.bib hawking1992.pdf hawking2005.pdf*
 
@@ -86,7 +86,7 @@ The behaviour of the script is best explained through some examples:
 
 * **bib.py** *destination.bib* **-no** *hawking1992.pdf hawking2005.pdf*
 
-  The opposite, text searching is disabled, and no entry obtained by searching for text is accepted. Entries identified by their ISBN or DOI, however, are still accepted.
+  The opposite, text searching is disabled, and no entry obtained by searching for text is accepted. Entries identified by their ISBN or DOI, however, are still accepted without asking.
 
 * **bib.py** *destination.bib* **-complete**
 
@@ -122,11 +122,11 @@ BibTeX Field handling
 
 * If possible, the **file** field is created with PDF or EBOOK file names given on the command line. The base name of the file is changed to the AYC key if the command **-rename** is given.
 
-* If the **isbn** and **doi** field are missing and the command **-complete** is given, **author**, **year** and **title** are used to attempt to discover the actual ISBN and/or DOI.
-
 * The **url** field is deleted if it actually contains a DOI and a **doi** field exists.
 
-* Only **author**, **title**, **publisher** and **year** data (if available) are extracted from the metadata of EBOOK files.
+* If the **isbn** and **doi** field are both missing and the command **-complete** is given, **author**, **year**, **title** and **publisher** are used as search text to attempt to obtain the actual ISBN or DOI (and possibly other fields).
+
+* Only **author**, **title**, **publisher** and **year** fields (if available) are extracted from the metadata of EBOOK files. Other fields may be searched with the command **-complete** just mentioned.
 
 * All other field are neither used nor changed.  
 
@@ -144,9 +144,9 @@ Requirements
 
 * python3
 
-* **subprocess**, **urllib**, **functools**, **requests**, **bibtexparser** and **isbnlib** (python packages)
+* **subprocess**, **urllib**, **functools**, **requests**, **bibtexparser**, **isbnlib** and **unidecode** (python packages)
 
-* **xpdf** (a program to display PDF files, may be replaced with any equivalent program)
+* **okular**, **pdftotext** and **ebook-meta** command line tools. They are programs to display a PDF file, to convert a PDF file to text, and to extract the metadata from an EBOOK, and may be replaced with equivalent programs.
 
 
 Installation
@@ -156,9 +156,17 @@ Installation
 
 * Copy **bib.py** anywhere on your path and ensure it is executable.
 
-* Modify the variables **USER_INFO** and **PDF_DISPLAY** at the beginning of the script as appropriate for your environment.
+* Modify the variable **USER_INFO** at the beginning of the script as appropriate for your environment. It should contain your email, and is used to identify yourself when querying **crossref.org**.
+
+* If any of the three command line tools is replaced by an equivalent program, modify the corresponding **subprocess.run()** or **subprocess.Popen()** function calls in the script, by inserting the new command and its appropriate options.
 
 * The documented default value of the variable **common_strings** in the library **bparser.py** is **True**. However, some library versions instead set it to **False**. In this case, edit **bparser.py** to specify "**common_strings=True**".
+
+
+Using **bib.py** as a library
+-----------------------------
+
+The script may be used as a library (with **import bib**). All functions with names such as *Something2bib* accept *Something* (given as a string) and return either BibTeX entries encoded as strings (if they succed) or the empty string (if they fail). Functions with names like *entry2Something_key* accept a BibTeX entry given as a field-value dictionary and return a *Something* key (as a string). Other functions return useful string values, **True** or **False** to indicate success or failure, or **None** if they are to be called only for side-effects and have nothing useful to return. A graph with the complete function call tree is available (https://github.com/raffadella/bib.py/blob/main/README.png). 
 
 
 License
@@ -171,11 +179,5 @@ Author
 ------
 
 Raffaele Guido Della Valle (https://raffaeledellavalle.neocities.org/, raffaele.dellavalle@unibo.it, raffadella@gmail.com)
-
-
-Using **bib.py** as a library
------------------------------
-
-The script may be used as a library (with **import bib**). All functions with names such as *Something2bib* accept *Something* (given as a string) and return either BibTeX entries encoded as strings (if they succed) or the empty string (if they fail). Functions with names like *entry2Something_key* accept a BibTeX entry given as a field-value dictionary and return a *Something* key (as a string). Other functions return useful string values, **True** or **False** to indicate success or failure, or **None** if they are to be called only for side-effects and have nothing useful to return. A graph with the complete function call tree is available (https://github.com/raffadella/bib.py/blob/main/README.png). 
 
 

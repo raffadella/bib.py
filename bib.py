@@ -23,11 +23,10 @@ import functools
 import requests
 import bibtexparser
 import isbnlib
+import unidecode
 
-# Items for local configuration: email of the user, and
-# a command to display a PDF file in new windows.
+# Local configuration: your email, used to identify yourself when querying CROSSREF
 USER_INFO = 'mailto:raffaele.dellavalle@unibo.it'
-PDF_DISPLAY = ['xpdf', '-q', '-geometry', 'x600-0-0']
 
 # URLs to resolve a DOI with crossref.org or doi.org - {} becomes the DOI
 XREF_URL = 'http://api.crossref.org/works/{}/transform/application/x-bibtex'
@@ -43,18 +42,18 @@ EBOOK_RE = r'(?i)\.(azw|azw[134]?|docx|epub|mobi|odt|rtf|pdf)$'
 MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun',
           'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
 
+# We use a single global variable, CONFIRM, set only by function command() and
+# tested only by function query2bib(). It controls y/n queries to the user.
+# Its possible values are True, False and None. True and False correspond to
+# options -y and -n (always accept or deny without asking). None means "ask".
+CONFIRM = None
+
 # Declare type for BibTeX entries: key -> value dictionary, both are strings
 BibEntry = Dict[str, str]
 
-# NOTE 1: In this code we deliberately use mutable defaults to memorize
+# NOTE: In this code we deliberately use mutable defaults to memorize
 # INITIALLY EMPTY PRIVATE lists and dictionaries (either [] or {}).
 # The pylint complaints about dangerous-default-value are irrelevant.
-
-# NOTE 2: The following kinds of key, val pairs are used through record()
-# 'all_confirm'  True or False to confirm 'YES' or 'NO' text queries
-# 'item_str'     item string (to print item trace)
-# 'entries_int'  number of accumulated BibTeX entries (to print item trace)
-
 
 def re_strip(txt: str, *regexps: str) -> str:
     """Utility: strip any number of regexp's from string txt"""
@@ -72,31 +71,12 @@ def re_find(txt: str, regexp: str, i: int = 0) -> str:
     return ''
 
 
-def record(key: Any, val: Any = None, default: Any = None,
-           memo_dict: Dict[Any, Any] = {}) -> Any:
-    """Record a mapping in an INITIALLY EMPTY PRIVATE dictionary. If val is
-       supplied (not None) store dict[key] = val and return val. If val is
-       None return the stored dict[key] if available, default otherwise."""
-    if val is None:
-        return memo_dict.get(key, default)
-    memo_dict[key] = val
-    return val
-
-
-def str2alphabetic(txt: str, chrmap=[]) -> str:
-    """Convert string to str2alphabetic characters. An initially empty private
-       character map is filled up and used to convert letters with diacritical
-       marks to their normal equivalents. Diacritics such as \v{c} and all non
-       str2alphabetic characters are stripped. Return the string in lower case.
-       Unicode blocks Latin-1 Supplement (some characters in \u0080-\u00ff)
-       and Latin Extended-A (all characters in \u0100-\u017f) are included."""
-    if chrmap == []:
-        chrmap = [chr(i) for i in range(128*3)]
-        chrs1 = "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃńŅņŇňŉŊŋŌōŎŏŐőŒœŔŕŖŗŘřŚśŜŝŞşŠšŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžſ"
-        chrs2 = "AAAAAAACEEEEIIIIDNOOOOO.OUUUUYTsaaaaaaaceeeeiiiidnooooo:ouuuuytyAaAaAaCcCcCcCcDdDdEeEeEeEeEeGgGgGgGgHhHhIiIiIiIiIiIiJjKkkLlLlLlLlLlNnNnNnnEeOoOoOoOoRrRrRrSsSsSsSsTtTtTtUuUuUuUuUuUuWwYyYZzZzZzs"
-        for (chr1,chr2) in zip(chrs1,chrs2):
-            chrmap[ord(chr1)] = chr2
-    txt = ''.join([chrmap[ord(chr1)] for chr1 in txt])
+def str2alphabetic(txt: str) -> str:
+    """Convert string to str2alphabetic characters. Letters with
+       diacritical marks are converted to their normal equivalents.
+       TeX diacritics such as \v{c} and all non alphabetic
+       characters are stripped. Return the string in lower case."""
+    txt = unidecode.unidecode(txt)
     return re_strip(txt, r'\\[utrdcvHkb]\{', r'[^A-Za-z]').lower()
 
 
@@ -110,12 +90,13 @@ def str2chksum(txt: str, divisor: int) -> int:
 def entry2ay_key(entry: BibEntry) -> str:
     """Make AY (author-year) partial key, with surname of the first author
        (lower-case, non str2alphabetic characters stripped) and publication year.
+       Keep only last word for quoted surnames containg spaces {{Tito Livio}}.
        For empty years, use 9900 plus the modulo 1000 checksum of the title."""
     author = entry.get('author') or entry.get('editor', 'unknown')
     author = re_find(author, '^(.*?)( and |$)', 1)
     au_dict = bibtexparser.customization.splitname(author, strict_mode=False)
-    author = ' '.join(au_dict['last'])
-
+    author = ''.join(au_dict['last'])
+    author = re_find(author, '.*?([^ }]+)}*$', 1)
     author = str2alphabetic(author)
     year = re_find(entry.get('year', ''), r'\d{4}')
     if not year:
@@ -163,22 +144,23 @@ def entry2safe_key(entry: BibEntry) -> str:
              entry2ay_key(entry) + re_strip(entry.get("title", "").lower(), r'[^a-z0-9 ]') )
 
 
-def user_confirm(bib: str, filename: str) -> Any:
-    """Ask user to confirm a BibTeX entry: display entry and PDF file (if
-       given), and ask 'n, y, N, Y' to user. Record 'Y' or 'N' answer (which
-       hold from now on). Return Truthy ('y' or 'Y') or Falsy ('n' or 'N')."""
-    print(bib)
+def user_confirm(bib: str, txt: str, pdf_file: str) -> Any:
+    """Ask user to confirm a BibTeX entry: display search text, found entry and
+       PDF file (if given), and ask 'n, y, N, Y' to user. Record 'Y' or 'N' answer
+       (which hold from now on). Return Truthy ('y' or 'Y') or Falsy ('n' or 'N')."""
 
-    if filename:
-        proc = subprocess.Popen(PDF_DISPLAY + [filename])
+    print('-' * 77)
+    print('SEARCHED:', txt)
+    print('OBTAINED:', bib)
 
+    if pdf_file:
+        proc = subprocess.Popen(['okular', pdf_file])
     try:
         answer = input('     Reference is correct? n (default), y, N, Y (for all): ')
     except (EOFError, KeyboardInterrupt):
         answer = 'n'
         print("\t", answer)
-
-    if filename:
+    if pdf_file:
         proc.terminate()
 
     answer = re_strip(answer, r'[^nyNY]')
@@ -201,6 +183,9 @@ def doi2bib(doi: str, url: str) -> str:
 def isbn2bib(isbn: str, service: str = 'goob') -> str:
     """Given ISBN string, query either 'goob' (Google Books, default) or
        'openl' (CROSSREF) WWW service and return BibTeX entry as a string"""
+    if isbnlib.notisbn(isbn, level='strict'):
+        return ''
+    isbn = isbnlib.to_isbn13(isbnlib.canonical(isbn))
     return isbnlib.registry.bibformatters['bibtex'](isbnlib.meta(isbn, service=service))
 
 
@@ -214,43 +199,28 @@ def jabfile(entry: BibEntry, filename: str = '') -> str:
     return re_find(entry.get('file', ''), '^:?(.+?):?$', 1)
 
 
-def item_trace(txt: str = '', num: int = 0) -> None:
-    """Utility to trace growth of BibTeX entries: item_trace(num=n) update
-       total of entries, item_trace(txt=item) print text item"""
-    if num:
-        record('entries_int', num)
-        return
-    if txt == record('item_str', default=''):
-        return
-    if txt:
-        record('item_str', txt)
-        print(f"{record('entries_int', default=0):4d}", re.sub(r'^(.{70,}?)\s.*', r'\1...', txt))
-    return
-
-
 def command(txt: str, entries: List[BibEntry]) -> str:
-    """Handle commands complete, rename, YES, NO (check only the first letter).
-       Return all obtained entries as a string for add_doi_isbn, '' otherwise."""
+    """Handle commands COMPLETE, RENAME, YES, NO (check only the first letter)."""
     if re.match(r'^[cC]', txt):
-        return add_doi_isbn(entries=entries)
+        complete(entries=entries)
     if re.match(r'^[rR]', txt):
         rename_files(entries=entries)
     if re.match(r'^[yYnN]', txt):
-        record('all_confirm', txt[0].lower() == 'y')
+        global CONFIRM
+        CONFIRM = txt[0].lower() == 'y'
     return ''
 
 
-def item2bib(item: str, filename: str = '', entries: List[BibEntry] = []) -> str:
+def item2bib(item: str, entries: List[BibEntry] = []) -> str:
     """Convert any item to BibTeX entries packed as a string. Return *.bib files
        as a string. Query WWW for DOI, ISBN or search text. Convert files as
        appropriate. Handle -whatever commands. Split other files either by
        paragraphs (if possible) or by lines (otherwise), convert each fragment to
-       a BibTeX entry as a string and return all concatenated entries. Parameters
-       filename and entries are just forwarded to suitable functions."""
+       a BibTeX entry as a string and return all concatenated entries. The entries
+       parameter is just forwarded to suitable functions."""
     item = item.strip()
     if len(item) < 1:
         return ''
-    item_trace(txt=item)
     try:
         if re.search(r'(?i)\.bib(tex)?$', item):
             return open(item, encoding = 'utf8').read()
@@ -265,7 +235,7 @@ def item2bib(item: str, filename: str = '', entries: List[BibEntry] = []) -> str
         if re.match(r'^-[A-Za-z]', item):
             return command(item[1:], entries=entries)
         if re.search(r'(\S+\s+){4}\S', item):
-            return query2bib(item, filename=filename)
+            return query2bib(item)
         item = open(item, encoding = 'utf8').read()
         separator = r'\n\n+' if re.search(r'\S\s*\n\n+\s*\S', item) else r'\n'
         return '\n\n'.join(item2bib(re.sub(r'\s+', ' ', item))
@@ -275,7 +245,7 @@ def item2bib(item: str, filename: str = '', entries: List[BibEntry] = []) -> str
         return ''
 
 
-def query2bib(txt: str, filename: str) -> str:
+def query2bib(txt: str, pdf_file: str = '') -> str:
     """Given a search text, return a BibTeX entry as a string. Try to extract
        anything that looks like an ISBN or a DOI and search for that. Failing
        this, use about 400 characters as search text. Query Google Books to
@@ -289,40 +259,39 @@ def query2bib(txt: str, filename: str) -> str:
         key = re_strip(key, r'^ISBN(-10|-13|)[:\s]+')
         return item2bib(key.replace(r' ', ''))
 
-    if record('all_confirm') is False:
+    if CONFIRM is False:
         return ''
 
     txt = re_find(txt, r'^[\S\s]{1,400}[^ ]*')
-
     isbn = isbnlib.isbn_from_words(txt)
     if isbn:
-        bib = isbn2bib(isbn)
-        if bib and (record('all_confirm') or user_confirm(bib, filename)):
+        bib = isbn2bib(isbn, "goob")
+        if bib and (CONFIRM or user_confirm(bib, txt, pdf_file)):
             return bib
 
     url = 'https://api.crossref.org/works'
     params = {'rows': '1', 'query.bibliographic': txt, 'select': 'DOI'}
     headers = {'User-Agent': f"DOI Importer ({USER_INFO})"}
-
     url = url + '?' + urllib.parse.urlencode(params)
     request = urllib.request.Request(url, None, headers)
     with urllib.request.urlopen(request, timeout=120) as response:
         encoding = response.info().get_param('charset', 'utf8')
-        txt = response.read().decode(encoding)
-
-    doi = re_find(txt, r'{"DOI":"(10\.\d{4,}[^"]+)"}', 1)
+        doi = response.read().decode(encoding)
+    doi = re_find(doi, r'{"DOI":"(10\.\d{4,}[^"]+)"}', 1)
     doi = doi.replace(r'\/', '/')
+
     bib = item2bib(doi)
-    if bib and (record('all_confirm') or user_confirm(bib, filename)):
+    if bib and (CONFIRM or user_confirm(bib, txt, pdf_file)):
         return bib
     return ''
 
 
-def pdf2bib(filename: str) -> str:
+def pdf2bib(pdf_file: str) -> str:
     """Given a PDF file, return a BibTeX entry as a string. Just extract from
        first 5000 characters of the PDF file and pass everything to query2bib()."""
-    txt = os.popen(f"pdftotext -enc ASCII7 -nopgbrk -q -l 8 '{filename}' -").read()[:5000]
-    return query2bib(txt, filename=filename)
+    txt = subprocess.run(['pdftotext', '-enc', 'ASCII7', '-nopgbrk', '-q', '-l', '8', pdf_file, '-'],
+                         check=True, text=True, capture_output=True).stdout[:5000]
+    return query2bib(txt, pdf_file=pdf_file)
 
 
 def entry2bib(entry: BibEntry):
@@ -338,8 +307,10 @@ def entry2bib(entry: BibEntry):
 def ebook2entry(filename: str) -> BibEntry:
     """Given an EBOOK, convert metadata to a BibTeX dictionary entry."""
     entry = {}
-    for txt in os.popen(f"ebook-meta '{filename}'"):
-        (key, val) = re.split("[^A-Za-z][^:]*:", txt, maxsplit=1)
+    txt = subprocess.run(['ebook-meta', filename],
+                         check=True, text=True, capture_output=True).stdout
+    for line in txt.splitlines():
+        (key, val) = re.split("[^A-Za-z][^:]*:", line, maxsplit=1)
         entry[key.lower()] = val.strip()
     entry['year'] = re_find(entry.get('published',''), r'\d{4}')
     return entry
@@ -348,15 +319,21 @@ def ebook2entry(filename: str) -> BibEntry:
 def entry2query(entry: BibEntry) -> str:
     """Given BibTeX entry as a list, return text string appropriate for a query"""
     return ' '.join(entry.get(field, '')
-                    for field in ['year', 'title', 'author'])
+                    for field in ['year', 'title', 'author', 'publisher'])
 
 
-def add_doi_isbn(entries: List[BibEntry]) -> str:
-    """Given list of BibTeX entries, attempt to obtain any missing DOI or ISBN
-       by querying the WWW, and return all obtained entries as a string"""
-    return '\n\n'.join(item2bib(entry2query(entry), filename=jabfile(entry))
-                       for entry in entries
-                       if 'doi' not in entry and 'isbn' not in entry)
+def complete(entries: List[BibEntry]) -> str:
+    """Given list of BibTeX entries, attempt to complete it. If DOI and ISBN
+        are both missing, build text query with available data, query the
+        WWW, and merge newly found and previous BibTeX entries. Only fields
+        previously non existing are filled with the newly found data."""
+    for num, entry in enumerate(entries):
+        if 'doi' not in entry and 'isbn' not in entry:
+            txt = entry2query(entry)
+            txt = item2bib(txt)
+            if txt:
+                bib = bibtexparser.loads(txt).entries[0]
+                entries[num] = {**bib, **entry}
 
 
 def rename_files(entries: List[BibEntry]) -> None:
@@ -377,7 +354,9 @@ def rename_files(entries: List[BibEntry]) -> None:
 
 
 def cleanup_entry(entry: BibEntry, item: str) -> None:
-    """Clean DOI, delete URLs which are DOIs, add FILE if available"""
+    """Delete empty fields, clean DOI field, delete URLs which are DOIs, add a
+       FILE field if the item argument matches an EBOOK regexp (including PDF)."""
+    entry = {key: val for key, val in entry.items() if val}
     if 'doi' in entry:
         entry['doi'] = re_find(entry['doi'], r'10\.\d{4,}/[\w()[\]{}<>%./#:;-]+[A-Za-z\d]')
     if 'url' in entry and re.search(r'[/.]doi[/.].*10\.\d\d\d\d', entry['url']):
@@ -478,15 +457,16 @@ or created if not, and which receives all obtained BibTeX entries."""
         if bibstr:
             for entry in bibtexparser.loads(bibstr).entries:
                 add2database(bibtex_database.entries, entry, item)
-        item_trace(num=len(bibtex_database.entries))
 
     # Dump final database if not empty
     if bibtex_database.entries:
         with open(items[0], 'w', encoding = 'utf8') as outfile:
             bibtexparser.dump(bibtex_database, outfile)
-    item_trace(txt='Total')
+            print(f'{len(bibtex_database.entries):4d} BibTeX entries')
 
 
 # Call "main" with command line arguments when invoked as a script
 if __name__ == '__main__':
+    str2alphabetic('>>>')
+
     main(sys.argv[1:])
