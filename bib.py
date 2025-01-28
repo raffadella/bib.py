@@ -98,7 +98,7 @@ def entry2ay_key(entry: BibEntry) -> str:
     author = ''.join(au_dict['last'])
     author = re_find(author, '.*?([^ }]+)}*$', 1)
     author = str2alphabetic(author)
-    year = re_find(entry.get('year', ''), r'\d{4}')
+    year = re_find(entry.get('urldate', entry.get('year', '')), r'\d{4}')
     if not year:
         year = str2chksum(entry.get("title", ""), 1000)
         year = f'9{year:03d}'

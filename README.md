@@ -116,7 +116,7 @@ The behaviour of the script is best explained through some examples:
 BibTeX Field handling
 ---------------------
 
-* Fields **author**, **editor**, **year**, **month**, **page** and **title** are used to construct AYC (author-year-character) BibTeX keys. When the field **year** is missing, AYC keys like "surname9000x" are used. The last three character of the "year" are a modulo 1000 checksum of the **title** field, converted to lower cases and with non-alphabetic characters removed.
+* Fields **author**, **editor**, **year** (or **urldate**), **month**, **page** and **title** are used to construct AYC (author-year-character) BibTeX keys. When the **year** is missing, AYC keys like "surname9000x" are used. The last three character of the "year" are a modulo 1000 checksum of the **title**, converted to lower cases and with non-alphabetic characters removed.
 
 * Fields **doi** and **isbn**, if present, are used to uniquely identify BibTeX entries. If both are missing, **author** (or **editor**), **year** and **title** are instead used to identify entries.
 
