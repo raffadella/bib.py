@@ -152,7 +152,7 @@ Requirements
 Installation
 ------------
 
-* Satisfy all requirements. On **debian** or **ubuntu** systems, the required python packages may be installed by issuing the comamnd "**apt install python3-requests python3-bibtexparser python3-isbnlib python3-unidecode**".
+* Satisfy all requirements. On **debian** or **ubuntu** systems, the required python packages may be installed by issuing the command "**apt install python3-requests python3-bibtexparser python3-isbnlib python3-unidecode**".
 
 * Copy **bib.py** anywhere on your path and ensure it is executable.
 
