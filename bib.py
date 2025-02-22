@@ -344,7 +344,7 @@ def rename_files(entries: List[BibEntry]) -> None:
        basename.  Files with spaces in the name are never renamed."""
     for entry in entries:
         filename = jabfile(entry)
-        if filename and not re_find(filename, r''):
+        if filename and not re_find(filename, r' '):
             head, tail = os.path.split(filename)
             root, ext = (re.match(r'^(.+?)(\.?[^.]*)$', tail)).group(1, 2)
             newroot = entry['ID']
@@ -354,9 +354,8 @@ def rename_files(entries: List[BibEntry]) -> None:
 
 
 def cleanup_entry(entry: BibEntry, item: str) -> None:
-    """Delete empty fields, clean DOI field, delete URLs which are DOIs, add a
-       FILE field if the item argument matches an EBOOK regexp (including PDF)."""
-    entry = {key: val for key, val in entry.items() if val}
+    """Clean DOI field, delete URLs which are DOIs, and add a FILE field
+       if the item argument matches an EBOOK regexp (including PDF)."""
     if 'doi' in entry:
         entry['doi'] = re_find(entry['doi'], r'10\.\d{4,}/[\w()[\]{}<>%./#:;-]+[A-Za-z\d]')
     if 'url' in entry and re.search(r'[/.]doi[/.].*10\.\d\d\d\d', entry['url']):
@@ -376,10 +375,11 @@ def next_letter(chars: str) -> str:
         if char not in chars:
             return char
 
+
 def add2database(entries: List[BibEntry], entry: BibEntry, item: str,
                  memo_dict: Dict[str, int] = {}) -> None:
-    """Append one BibTeX entry to list of entries (if not there already), or
-       just add any missing field (otherwise). An INITIALLY EMPTY PRIVATE
+    """Append one BibTeX entry to list of entries (if not yet present), or
+       add any missing or empty field (otherwise). An INITIALLY EMPTY PRIVATE
        dictionary is used to index the list, with a safe key (DOI, ISBN, or
        AYC plus title). The value associated to the key is the position (the
        index) of the corresponding entry in the list. The AYC key is also
@@ -390,7 +390,7 @@ def add2database(entries: List[BibEntry], entry: BibEntry, item: str,
     num = memo_dict.get(safe_key)
     if num is not None:
         for field, value in entry.items():
-            if field != 'ID' and field not in entries[num]:
+            if field != 'ID' and not entries[num].get(field):
                 entries[num][field] = value
     else:
         ayc_key = entry2ayc_key(entry)
@@ -467,6 +467,4 @@ or created if not, and which receives all obtained BibTeX entries."""
 
 # Call "main" with command line arguments when invoked as a script
 if __name__ == '__main__':
-    str2alphabetic('>>>')
-
     main(sys.argv[1:])
