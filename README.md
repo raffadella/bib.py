@@ -60,7 +60,7 @@ The behaviour of the script is best explained through some examples:
 
 * **bib.py** *destination.bib source1.bib source2.bib source3.bib*
 
-  Combines BibTeX files: *destination.bib* receives BibTeX entries from all files. Entries are considered duplicated if they have the same DOI, or the same ISBN, or the same first author, year and title (when DOI and ISBN are both missing). Only the first of a set of duplicated entries is kept, except for missing fields (if any) which are taken from later entries.
+  Combines BibTeX files: *destination.bib* receives BibTeX entries from all files. Entries are considered duplicated if they have the same DOI, or the same ISBN, or the same first author, year and title (when DOI and ISBN are both missing). Only the first of a set of duplicated entries is kept, except for missing or empty fields (if any) which are taken from later entries.
 
   Each distinct (i.e. non duplicated) entry receives an AYC (author-year-character) key of the form "*surname2010x*", containing the surname of the first author (the editor if there is no author) converted to lower-case with non-alphabetic characters removed, the publication year, and a final character that guarantees unicity. This character is **a** **b** ... **l** to indicate the publication month **jan** **feb** ... **dec** if available, or the last digit **0** **1** ... **9** of the page if available or, if both are unavailable, a letter from **m** to **z** based on a modulo 13 checksum of the title. A still unused letter from **a** to **z** is used in case of a collision (distinct entries which would otherwise have the same AYC keys). Whenever necessary, the AYC key is used as default file basename.
 
