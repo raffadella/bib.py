@@ -15,7 +15,6 @@ See docstring of main() below, and README.md 'restructured text' file."""
 import os
 import sys
 import re
-from typing import Any, Dict, List
 
 import subprocess
 import urllib
@@ -49,7 +48,7 @@ MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun',
 CONFIRM = None
 
 # Declare type for BibTeX entries: key -> value dictionary, both are strings
-BibEntry = Dict[str, str]
+BibEntry = dict[str, str]
 
 # NOTE: In this code we deliberately use mutable defaults to memorize
 # INITIALLY EMPTY PRIVATE lists and dictionaries (either [] or {}).
@@ -100,8 +99,7 @@ def entry2ay_key(entry: BibEntry) -> str:
     author = str2alphabetic(author)
     year = re_find(entry.get('urldate', entry.get('year', '')), r'\d{4}')
     if not year:
-        year = str2chksum(entry.get("title", ""), 1000)
-        year = f'9{year:03d}'
+        year = f'9{str2chksum(entry.get("title", ""), 1000):03d}'
     return author + year
 
 
@@ -144,10 +142,10 @@ def entry2safe_key(entry: BibEntry) -> str:
              entry2ay_key(entry) + re_strip(entry.get("title", "").lower(), r'[^a-z0-9 ]') )
 
 
-def user_confirm(bib: str, txt: str, pdf_file: str) -> Any:
+def user_confirm(bib: str, txt: str, pdf_file: str) -> bool:
     """Ask user to confirm a BibTeX entry: display search text, found entry and
        PDF file (if given), and ask 'n, y, N, Y' to user. Record 'Y' or 'N' answer
-       (which hold from now on). Return Truthy ('y' or 'Y') or Falsy ('n' or 'N')."""
+       (which hold from now on). Return True ('y' or 'Y') or False ('n' or 'N')."""
 
     print('-' * 77)
     print('SEARCHED:', txt)
@@ -166,7 +164,7 @@ def user_confirm(bib: str, txt: str, pdf_file: str) -> Any:
     answer = re_strip(answer, r'[^nyNY]')
     if re.match(r'^[YN]', answer):
         command(answer, entries=[])
-    return re.match('^[yY]', answer)
+    return bool(re.match('^[yY]', answer))
 
 
 def doi2bib(doi: str, url: str) -> str:
@@ -199,7 +197,7 @@ def jabfile(entry: BibEntry, filename: str = '') -> str:
     return re_find(entry.get('file', ''), '^:?(.+?):?$', 1)
 
 
-def command(txt: str, entries: List[BibEntry]) -> str:
+def command(txt: str, entries: list[BibEntry]) -> str:
     """Handle commands COMPLETE, RENAME, YES, NO (check only the first letter)."""
     if re.match(r'^[cC]', txt):
         complete(entries=entries)
@@ -211,7 +209,7 @@ def command(txt: str, entries: List[BibEntry]) -> str:
     return ''
 
 
-def item2bib(item: str, entries: List[BibEntry] = []) -> str:
+def item2bib(item: str, entries: list[BibEntry] = []) -> str:
     """Convert any item to BibTeX entries packed as a string. Return *.bib files
        as a string. Query WWW for DOI, ISBN or search text. Convert files as
        appropriate. Handle -whatever commands. Split other files either by
@@ -322,7 +320,7 @@ def entry2query(entry: BibEntry) -> str:
                     for field in ['year', 'title', 'author', 'publisher'])
 
 
-def complete(entries: List[BibEntry]) -> str:
+def complete(entries: list[BibEntry]) -> None:
     """Given list of BibTeX entries, attempt to complete it. If DOI and ISBN
         are both missing, build text query with available data, query the
         WWW, and merge newly found and previous BibTeX entries. Only fields
@@ -336,7 +334,7 @@ def complete(entries: List[BibEntry]) -> str:
                 entries[num] = {**bib, **entry}
 
 
-def rename_files(entries: List[BibEntry]) -> None:
+def rename_files(entries: list[BibEntry]) -> None:
     """If a BibTeX entry contains a 'file' field, or if the entry is
        obtained from a PDF file, the 'file' field is updated (or created)
        with the AYC (author-year-character ID) of the entry as basename.
@@ -376,38 +374,39 @@ def next_letter(chars: str) -> str:
             return char
 
 
-def add2database(entries: List[BibEntry], entry: BibEntry, item: str,
-                 memo_dict: Dict[str, int] = {}) -> None:
+def add2database(entries: list[BibEntry], entry: BibEntry, item: str,
+                 key2num_dict: dict[str, int] = {},
+                 key2chr_dict: dict[str, str] = {}) -> None:
     """Append one BibTeX entry to list of entries (if not yet present), or
-       add any missing or empty field (otherwise). An INITIALLY EMPTY PRIVATE
-       dictionary is used to index the list, with a safe key (DOI, ISBN, or
-       AYC plus title). The value associated to the key is the position (the
-       index) of the corresponding entry in the list. The AYC key is also
-       stored in the dictionary to discover collisions. In case of an AYC
-       collision, select the next unused 'a'...'z' letter (in cyclic order)."""
+       add any missing or empty field (otherwise). Two INITIALLY EMPTY
+       PRIVATE dictionaries, with a safe key (DOI, ISBN, or AYC plus title)
+       are used. For key2num_dict the value associated to the key is the
+       position (the index) of the corresponding entry in the list. For
+       key2chr_dict the value is a string with all letters already used for
+       AYC keys, to discover collisions. In case of an AYC collision,
+       we select the next unused 'a'...'z' letter (in cyclic order)."""
     cleanup_entry(entry, item)
     safe_key = entry2safe_key(entry)
-    num = memo_dict.get(safe_key)
+    num = key2num_dict.get(safe_key)
     if num is not None:
         for field, value in entry.items():
             if field != 'ID' and not entries[num].get(field):
                 entries[num][field] = value
     else:
         ayc_key = entry2ayc_key(entry)
-
-        if ayc_key in memo_dict:
-            char = next_letter(memo_dict[ayc_key])
-            memo_dict[ayc_key] += char
+        if ayc_key in key2chr_dict:
+            char = next_letter(key2chr_dict[ayc_key])
+            key2chr_dict[ayc_key] += char
             ayc_key = ayc_key[:-1] + char
         else:
-            memo_dict[ayc_key] = ayc_key[-1]
+            key2chr_dict[ayc_key] = ayc_key[-1]
 
         entry['ID'] = ayc_key
-        memo_dict[safe_key] = len(entries)
+        key2num_dict[safe_key] = len(entries)
         entries.append(entry)
 
 
-def main(items: List[str]) -> None:
+def main(items: list[str]) -> None:
     """bib.py - Create, combine, complete and clean BibTeX bibliographies.
 
 Usage: bib.py item ...
