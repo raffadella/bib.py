@@ -12,6 +12,14 @@ See docstring of main() below, and README.md 'restructured text' file."""
 #   bib.py on github  - https://github.com/raffadella/bib.py
 #   CrossRef REST API - https://github.com/CrossRef/rest-api-doc
 
+# NOTE-1: In this code we deliberately use mutable defaults to memorize
+# INITIALLY EMPTY PRIVATE lists and dictionaries (either [] or {}).
+# The pylint complaints about dangerous-default-value are irrelevant.
+
+# NOTE-2: We use type hints. Except for couple of errors about "Optional[str]"
+# and "Optional[Match[str]]", which are false positive, we pass a mypy check with
+# --disallow-untyped-defs --disallow-incomplete-defs --disallow-untyped-calls.
+
 import os
 import sys
 import re
@@ -34,7 +42,7 @@ DOI_URL = 'https://doi.org/{}'
 # A regular expression (RE) matching a key (either ISBN or DOI)
 KEY_RE = r'\b(ISBN(-10|-13|)[:\s]+\d[\d -]{8,15}[\dX]|10\.\d{4,}/[\w()[\]{}<>%./#:;-]+[A-Za-z\d])\b'
 
-# A regular expression (RE) matching EBOOK types handled by ebook-meta
+# A regular expression (RE) matching common EBOOK types handled by ebook-meta
 EBOOK_RE = r'(?i)\.(azw|azw[134]?|docx|epub|mobi|odt|rtf|pdf)$'
 
 # Standard names found in BibTeX files when months are given as strings
@@ -49,10 +57,6 @@ CONFIRM = None
 
 # Declare type for BibTeX entries: key -> value dictionary, both are strings
 BibEntry = dict[str, str]
-
-# NOTE: In this code we deliberately use mutable defaults to memorize
-# INITIALLY EMPTY PRIVATE lists and dictionaries (either [] or {}).
-# The pylint complaints about dangerous-default-value are irrelevant.
 
 def re_strip(txt: str, *regexps: str) -> str:
     """Utility: strip any number of regexp's from string txt"""
@@ -292,7 +296,7 @@ def pdf2bib(pdf_file: str) -> str:
     return query2bib(txt, pdf_file=pdf_file)
 
 
-def entry2bib(entry: BibEntry):
+def entry2bib(entry: BibEntry) -> str:
     """Pack BibTeX dictionary entry into a string, only for the main fields."""
     bibtex = '@book{EPUB,'
     for (key, val) in entry.items():
@@ -353,9 +357,15 @@ def rename_files(entries: list[BibEntry]) -> None:
 
 def cleanup_entry(entry: BibEntry, item: str) -> None:
     """Clean DOI field, delete URLs which are DOIs, and add a FILE field
-       if the item argument matches an EBOOK regexp (including PDF)."""
+       if the item argument matches an EBOOK regexp (including PDF). 
+       Convert months given as "Jan" to "Dec" to numbers 1 to 12."""
     if 'doi' in entry:
         entry['doi'] = re_find(entry['doi'], r'10\.\d{4,}/[\w()[\]{}<>%./#:;-]+[A-Za-z\d]')
+    if 'month' in entry:
+        month = entry['month']
+        if not re.match(r'^(0?[1-9]|1[012])$', month):
+            imonth = MONTHS.index(month[:3].lower())
+            entry['month'] = str(imonth + 1)
     if 'url' in entry and re.search(r'[/.]doi[/.].*10\.\d\d\d\d', entry['url']):
         del entry['url']
     if re.search(EBOOK_RE, item):
@@ -375,34 +385,35 @@ def next_letter(chars: str) -> str:
 
 
 def add2database(entries: list[BibEntry], entry: BibEntry, item: str,
-                 key2num_dict: dict[str, int] = {},
-                 key2chr_dict: dict[str, str] = {}) -> None:
-    """Append one BibTeX entry to list of entries (if not yet present), or
-       add any missing or empty field (otherwise). Two INITIALLY EMPTY
-       PRIVATE dictionaries, with a safe key (DOI, ISBN, or AYC plus title)
-       are used. For key2num_dict the value associated to the key is the
-       position (the index) of the corresponding entry in the list. For
-       key2chr_dict the value is a string with all letters already used for
-       AYC keys, to discover collisions. In case of an AYC collision,
-       we select the next unused 'a'...'z' letter (in cyclic order)."""
+                 key2num: dict[str, int] = {},
+                 ayc2chr: dict[str, str] = {}) -> None:
+    """Append one BibTeX entry to list of entries (if not yet present),
+       or add any missing or empty field (otherwise). Two INITIALLY
+       EMPTY PRIVATE dictionaries are used. The key2num dict with a safe
+       key (DOI, ISBN, or AYC plus title), and as value the position
+       (the index) of the corresponding entry in the entries list. value
+       associated to the key is. The key2chr dict with the AYC as key,
+       and as value the string with all letters already used for that
+       AYC, to discover collisions. In case of a collision, we select
+       the next unused 'a'...'z' letter (in cyclic order)."""
     cleanup_entry(entry, item)
     safe_key = entry2safe_key(entry)
-    num = key2num_dict.get(safe_key)
+    num = key2num.get(safe_key)
     if num is not None:
         for field, value in entry.items():
             if field != 'ID' and not entries[num].get(field):
                 entries[num][field] = value
     else:
         ayc_key = entry2ayc_key(entry)
-        if ayc_key in key2chr_dict:
-            char = next_letter(key2chr_dict[ayc_key])
-            key2chr_dict[ayc_key] += char
+        if ayc_key in ayc2chr:
+            char = next_letter(ayc2chr[ayc_key])
+            ayc2chr[ayc_key] += char
             ayc_key = ayc_key[:-1] + char
         else:
-            key2chr_dict[ayc_key] = ayc_key[-1]
+            ayc2chr[ayc_key] = ayc_key[-1]
 
         entry['ID'] = ayc_key
-        key2num_dict[safe_key] = len(entries)
+        key2num[safe_key] = len(entries)
         entries.append(entry)
 
 
