@@ -93,8 +93,8 @@ def str2chksum(txt: str, divisor: int) -> int:
 def entry2ay_key(entry: BibEntry) -> str:
     """Make AY (author-year) partial key, with surname of the first author
        (lower-case, non str2alphabetic characters stripped) and publication year.
-       Keep only last word for quoted surnames containg spaces {{Tito Livio}}.
-       For empty years, use 9900 plus the modulo 1000 checksum of the title."""
+       Keep only last word for quoted surnames containing spaces {{Tito Livio}}.
+       For empty years use 9XXX, with XXX the modulo 1000 checksum of the title."""
     author = entry.get('author') or entry.get('editor', 'unknown')
     author = re_find(author, '^(.*?)( and |$)', 1)
     au_dict = bibtexparser.customization.splitname(author, strict_mode=False)
